@@ -8,7 +8,7 @@ const tabs = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/diario', label: 'Diario', icon: BookOpen },
   { href: '/video', label: 'Video', icon: Video },
-  { href: '/contratto', label: 'Profilo', icon: User },
+  { href: '/profilo', label: 'Profilo', icon: User },
 ];
 
 export default function BottomNav() {
