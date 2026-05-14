@@ -1,0 +1,26 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /patients/{patientId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == patientId;
+    }
+
+    match /contractItems/{itemId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    match /dailyEntries/{entryId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    match /videos/{videoId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}

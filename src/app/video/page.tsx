@@ -55,22 +55,30 @@ export default function VideoPage() {
     }
   }
 
-  function handleUpload() {
+  async function handleUpload() {
     if (!selectedFile || !title) return;
     setUploading(true);
 
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('patientId', 'patient-1');
+      formData.append('title', title);
+
+      const res = await fetch('/api/upload-video', { method: 'POST', body: formData });
+      const data = await res.json();
+
       const newVideo: RehabVideo = {
         id: `video-${Date.now()}`,
         patientId: 'patient-1',
         title,
         date: new Date().toISOString().split('T')[0],
         duration: '0:00',
+        googleDriveUrl: data.webViewLink || undefined,
         notes: notes || undefined,
         uploadedAt: new Date().toISOString(),
       };
       addVideo(newVideo);
-      setUploading(false);
       setUploadComplete(true);
       setTimeout(() => {
         setShowUpload(false);
@@ -79,7 +87,11 @@ export default function VideoPage() {
         setNotes('');
         setSelectedFile(null);
       }, 1500);
-    }, 2000);
+    } catch {
+      alert('Errore durante il caricamento. Riprova.');
+    } finally {
+      setUploading(false);
+    }
   }
 
   return (
