@@ -17,9 +17,13 @@ async function getOrCreatePatientFolder(
 ): Promise<string> {
   if (!PARENT_FOLDER_ID) throw new Error('GOOGLE_DRIVE_FOLDER_ID env var not set');
 
+  const safeName = patientId.replace(/'/g, "\\'");
+
   const existing = await drive.files.list({
-    q: `name='${patientId}' and '${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    q: `name='${safeName}' and '${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     fields: 'files(id, name)',
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   if (existing.data.files && existing.data.files.length > 0) {
@@ -33,6 +37,7 @@ async function getOrCreatePatientFolder(
       parents: [PARENT_FOLDER_ID],
     },
     fields: 'id',
+    supportsAllDrives: true,
   });
   return folder.data.id!;
 }
