@@ -16,6 +16,7 @@ import {
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import BottomNav from '@/components/BottomNav';
+import ChatAssistant from '@/components/ChatAssistant';
 import { useAppStore } from '@/lib/store';
 
 const moodEmojis = ['', '😫', '😔', '😐', '🙂', '😊'];
@@ -226,6 +227,7 @@ export default function HomePage() {
         )}
       </main>
 
+      <ChatAssistant />
       <BottomNav />
     </div>
   );

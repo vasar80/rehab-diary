@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.13.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^12.38.0",
     "googleapis": "^171.4.0",
     "lucide-react": "^1.16.0",

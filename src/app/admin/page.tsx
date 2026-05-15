@@ -20,6 +20,8 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAppStore } from '@/lib/store';
 import { mockPatients, mockEntries, mockVideos, mockContractItems } from '@/lib/mock-data';
+import { getPatientsForTherapist, getDailyEntries, getVideos, getContractItems } from '@/lib/firestore';
+import { Patient as FsPatient, DailyEntry as FsEntry, RehabVideo as FsVideo, ContractItem as FsCI } from '@/lib/types';
 
 const moodEmojis = ['', '😫', '😔', '😐', '🙂', '😊'];
 
@@ -30,7 +32,47 @@ export default function AdminPage() {
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'risposte' | 'contratto' | 'video'>('risposte');
 
+  const isDemo = !!user?.isDemo;
+  const [livePatients, setLivePatients] = useState<FsPatient[]>([]);
+  const [liveEntries, setLiveEntries] = useState<FsEntry[]>([]);
+  const [liveVideos, setLiveVideos] = useState<FsVideo[]>([]);
+  const [liveContracts, setLiveContracts] = useState<FsCI[]>([]);
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (isDemo || !user || user.role !== 'admin') return;
+    (async () => {
+      try {
+        const pts = await getPatientsForTherapist(user.id);
+        setLivePatients(pts);
+        const allEntries: FsEntry[] = [];
+        const allVideos: FsVideo[] = [];
+        const allContracts: FsCI[] = [];
+        for (const p of pts) {
+          const [e, v, c] = await Promise.all([
+            getDailyEntries(p.id).catch(() => [] as FsEntry[]),
+            getVideos(p.id).catch(() => [] as FsVideo[]),
+            getContractItems(p.id).catch(() => [] as FsCI[]),
+          ]);
+          allEntries.push(...e);
+          allVideos.push(...v);
+          allContracts.push(...c);
+        }
+        setLiveEntries(allEntries);
+        setLiveVideos(allVideos);
+        setLiveContracts(allContracts);
+      } catch (err) {
+        console.warn('Admin Firestore load error', err);
+      }
+    })();
+  }, [mounted, isDemo, user]);
+
+  const patients = isDemo ? mockPatients : livePatients;
+  const entries = isDemo ? mockEntries : liveEntries;
+  const videos = isDemo ? mockVideos : liveVideos;
+  const contractItems = isDemo ? mockContractItems : liveContracts;
 
   if (!mounted) {
     return (
@@ -43,10 +85,21 @@ export default function AdminPage() {
   const adminName = user?.name?.split(' ')[0] || 'Dottoressa';
 
   if (selectedPatient) {
-    const patient = mockPatients.find((p) => p.id === selectedPatient)!;
-    const patientEntries = mockEntries.filter((e) => e.patientId === selectedPatient);
-    const patientVideos = mockVideos.filter((v) => v.patientId === selectedPatient);
-    const patientContract = mockContractItems.filter((ci) => ci.patientId === selectedPatient);
+    const patient = patients.find((p) => p.id === selectedPatient)!;
+    const patientEntries = entries.filter((e) => e.patientId === selectedPatient);
+    const patientVideos = videos.filter((v) => v.patientId === selectedPatient);
+    const patientContract = contractItems.filter((ci) => ci.patientId === selectedPatient);
+
+    if (!patient) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center px-6">
+          <p className="text-text-secondary">Paziente non trovato.</p>
+          <button onClick={() => setSelectedPatient(null)} className="mt-4 gradient-primary text-white px-6 py-2.5 rounded-2xl font-semibold">
+            Torna alla lista
+          </button>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen pb-12 relative">
@@ -276,7 +329,7 @@ export default function AdminPage() {
                 <Users size={20} className="text-white" strokeWidth={2.5} />
               </div>
             </div>
-            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{mockPatients.length}</p>
+            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{patients.length}</p>
             <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mt-0.5">Pazienti attivi</p>
           </div>
           <div className="glass rounded-3xl p-4 text-center">
@@ -286,7 +339,7 @@ export default function AdminPage() {
                 <BarChart3 size={20} className="text-white" strokeWidth={2.5} />
               </div>
             </div>
-            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{mockEntries.length}</p>
+            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{entries.length}</p>
             <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mt-0.5">Report totali</p>
           </div>
         </div>
@@ -299,8 +352,15 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {mockPatients.map((patient) => {
-            const patientEntries = mockEntries.filter((e) => e.patientId === patient.id);
+          {patients.length === 0 && (
+            <div className="glass-soft rounded-3xl p-6 text-center text-text-secondary text-sm">
+              Nessun paziente assegnato.
+              {!isDemo && ' Il super admin deve assegnarti dei pazienti.'}
+            </div>
+          )}
+
+          {patients.map((patient) => {
+            const patientEntries = entries.filter((e) => e.patientId === patient.id);
             const lastEntry = patientEntries[0];
             const lastMood = lastEntry?.mood;
 

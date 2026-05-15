@@ -14,7 +14,7 @@ import {
   DocumentData,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { ContractItem, DailyEntry, RehabVideo, Patient } from './types';
+import { ContractItem, DailyEntry, RehabVideo, Patient, Therapist } from './types';
 
 // --- Patients ---
 
@@ -37,6 +37,38 @@ export async function savePatient(patient: Patient): Promise<void> {
     therapistId: patient.therapistId,
     avatarUrl: patient.avatarUrl || null,
   });
+}
+
+// --- Therapists ---
+
+export async function getTherapist(therapistId: string): Promise<Therapist | null> {
+  const snap = await getDoc(doc(db, 'therapists', therapistId));
+  return snap.exists() ? ({ id: snap.id, ...snap.data() } as Therapist) : null;
+}
+
+export async function getAllTherapists(): Promise<Therapist[]> {
+  const snap = await getDocs(collection(db, 'therapists'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Therapist);
+}
+
+export async function saveTherapist(therapist: Therapist): Promise<void> {
+  await setDoc(doc(db, 'therapists', therapist.id), {
+    name: therapist.name,
+    email: therapist.email,
+    specialty: therapist.specialty || null,
+    sex: therapist.sex || null,
+    createdAt: therapist.createdAt || new Date().toISOString(),
+  });
+}
+
+export async function getPatientsForTherapist(therapistId: string): Promise<Patient[]> {
+  const q = query(collection(db, 'patients'), where('therapistId', '==', therapistId));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Patient);
+}
+
+export async function assignTherapistToPatient(patientId: string, therapistId: string): Promise<void> {
+  await updateDoc(doc(db, 'patients', patientId), { therapistId });
 }
 
 // --- Contract Items ---

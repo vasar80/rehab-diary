@@ -6,6 +6,7 @@ import { Heart, ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-r
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
 import { auth as firebaseAuth } from '@/lib/firebase';
+import { deriveRoleFromEmail } from '@/lib/types';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,15 +32,19 @@ export default function LoginPage() {
         await login(email, password);
       }
       const fbUser = firebaseAuth.currentUser;
+      const effectiveRole = deriveRoleFromEmail(email);
+      const finalRole = effectiveRole === 'super_admin' ? 'super_admin' : mode;
       setUser({
         id: fbUser?.uid || email,
-        role: mode,
+        role: finalRole,
         name: fbUser?.displayName || name || email.split('@')[0],
         email,
         sex: mode === 'patient' ? sex : undefined,
         isDemo: false,
       });
-      router.push(mode === 'admin' ? '/admin' : '/');
+      if (finalRole === 'super_admin') router.push('/super');
+      else if (finalRole === 'admin') router.push('/admin');
+      else router.push('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Errore sconosciuto';
       if (msg.includes('user-not-found') || msg.includes('invalid-credential')) {

@@ -12,7 +12,9 @@ export interface Therapist {
   id: string;
   name: string;
   email: string;
-  specialty: string;
+  specialty?: string;
+  sex?: 'M' | 'F';
+  createdAt?: string;
 }
 
 export interface ContractItem {
@@ -68,7 +70,7 @@ export interface RehabVideo {
   uploadedAt: string;
 }
 
-export type UserRole = 'patient' | 'admin';
+export type UserRole = 'patient' | 'admin' | 'super_admin';
 
 export interface AppUser {
   id: string;
@@ -77,4 +79,15 @@ export interface AppUser {
   email: string;
   sex?: 'M' | 'F';
   isDemo?: boolean;
+}
+
+export const SUPER_ADMIN_EMAIL = 'valeriosarmati@gmail.com';
+
+export function deriveRoleFromEmail(email: string): UserRole {
+  const normalized = email.toLowerCase().trim();
+  if (normalized === SUPER_ADMIN_EMAIL) return 'super_admin';
+  if (normalized.includes('admin') || normalized.includes('therapist') || normalized.includes('therap')) {
+    return 'admin';
+  }
+  return 'patient';
 }

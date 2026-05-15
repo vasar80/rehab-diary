@@ -10,8 +10,8 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { getPatient, savePatient } from './firestore';
-import { UserRole } from './types';
+import { getPatient, savePatient, saveTherapist } from './firestore';
+import { UserRole, deriveRoleFromEmail } from './types';
 
 interface AuthUser {
   uid: string;
@@ -49,9 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        const role: UserRole = fbUser.email?.includes('admin') || fbUser.email?.includes('therapist')
-          ? 'admin'
-          : 'patient';
+        const role: UserRole = deriveRoleFromEmail(fbUser.email || '');
         let sex: 'M' | 'F' | undefined;
         if (role === 'patient') {
           try {
@@ -82,30 +80,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(email: string, password: string, name: string, role: UserRole, sex?: 'M' | 'F') {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    if (role === 'patient') {
-      try {
-        await Promise.race([
-          savePatient({
-            id: cred.user.uid,
-            name,
-            email,
-            sex,
-            startDate: new Date().toISOString().split('T')[0],
-            therapistId: '',
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
-        ]);
-      } catch {
-        console.warn('Could not save patient to Firestore, will retry later');
-      }
+
+    const effectiveRole: UserRole = deriveRoleFromEmail(email) === 'super_admin' ? 'super_admin' : role;
+
+    try {
+      await Promise.race([
+        (async () => {
+          if (effectiveRole === 'patient') {
+            await savePatient({
+              id: cred.user.uid,
+              name,
+              email,
+              sex,
+              startDate: new Date().toISOString().split('T')[0],
+              therapistId: '',
+            });
+          } else if (effectiveRole === 'admin') {
+            await saveTherapist({
+              id: cred.user.uid,
+              name,
+              email,
+              sex,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        })(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
+      ]);
+    } catch {
+      console.warn('Could not save profile to Firestore, will retry later');
     }
     setUser({
       uid: cred.user.uid,
       email,
       displayName: name,
-      role,
+      role: effectiveRole,
       sex,
-      patientId: role === 'patient' ? cred.user.uid : undefined,
+      patientId: effectiveRole === 'patient' ? cred.user.uid : undefined,
     });
   }
 

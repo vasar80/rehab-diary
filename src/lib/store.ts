@@ -239,12 +239,21 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'rehab-diary-storage',
+      version: 2,
       partialize: (state) => ({
         user: state.user,
-        entries: state.entries,
-        videos: state.videos,
-        contractItems: state.contractItems,
       }),
+      migrate: (persistedState: unknown, version: number) => {
+        const fallback = { user: null as AppUser | null };
+        if (!persistedState || typeof persistedState !== 'object') return fallback;
+        const state = persistedState as Record<string, unknown>;
+        if (version < 2) {
+          delete state.entries;
+          delete state.videos;
+          delete state.contractItems;
+        }
+        return { user: (state.user as AppUser | null) ?? null };
+      },
     }
   )
 );
