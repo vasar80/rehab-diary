@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, ArrowRight, Shield, Loader2, UserPlus } from 'lucide-react';
+import { Heart, ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
 import { auth as firebaseAuth } from '@/lib/firebase';
@@ -68,136 +68,153 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary via-primary-dark to-[#0a5c56] flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="animate-scale-in">
-          <div className="w-20 h-20 bg-white/15 rounded-3xl flex items-center justify-center mx-auto backdrop-blur-sm">
-            <Heart size={36} className="text-white" />
-          </div>
-          <h1 className="text-white text-3xl font-bold text-center mt-6">
-            RehabDiary
-          </h1>
-          <p className="text-white/70 text-center mt-2 text-sm max-w-[260px] mx-auto">
-            Il tuo compagno quotidiano nel percorso di riabilitazione
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="w-full max-w-sm mt-10 space-y-3 animate-fade-in stagger-2">
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-1 flex">
-            <button
-              type="button"
-              onClick={() => setMode('patient')}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                mode === 'patient'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-white/70'
-              }`}
-            >
-              Paziente
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('admin')}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                mode === 'admin'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-white/70'
-              }`}
-            >
-              Terapista
-            </button>
-          </div>
-
-          <div className="space-y-3 mt-4">
-            {isRegister && (
-              <input
-                type="text"
-                placeholder="Nome completo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full bg-white/12 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/40 focus:outline-none focus:border-white/50 transition-colors"
-              />
-            )}
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full bg-white/12 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/40 focus:outline-none focus:border-white/50 transition-colors"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-white/12 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3.5 text-white placeholder:text-white/40 focus:outline-none focus:border-white/50 transition-colors"
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-500/20 border border-red-400/30 rounded-xl px-4 py-2.5">
-              <p className="text-white/90 text-sm">{error}</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-primary font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 mt-4 active:scale-[0.98] transition-transform shadow-lg shadow-black/10 disabled:opacity-60"
-          >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : isRegister ? (
-              <>
-                <UserPlus size={18} />
-                Registrati
-              </>
-            ) : (
-              <>
-                Accedi
-                <ArrowRight size={18} />
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setIsRegister(!isRegister); setError(''); }}
-            className="w-full text-white/60 text-sm py-2 font-medium"
-          >
-            {isRegister ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati'}
-          </button>
-
-          <div className="flex items-center gap-3 mt-2">
-            <div className="flex-1 h-px bg-white/20" />
-            <span className="text-white/40 text-xs">oppure</span>
-            <div className="flex-1 h-px bg-white/20" />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('patient')}
-              className="flex-1 bg-white/10 text-white/80 text-sm font-medium py-2.5 rounded-xl active:scale-95 transition-transform"
-            >
-              Demo Paziente
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin')}
-              className="flex-1 bg-white/10 text-white/80 text-sm font-medium py-2.5 rounded-xl active:scale-95 transition-transform"
-            >
-              Demo Terapista
-            </button>
-          </div>
-        </form>
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="blob-bg blob-teal w-[500px] h-[500px] top-[-200px] left-[-150px] animate-float-blob-1" />
+        <div className="blob-bg blob-warm w-[400px] h-[400px] top-[40%] right-[-150px] animate-float-blob-2" />
+        <div className="blob-bg blob-purple w-[350px] h-[350px] bottom-[-150px] left-[10%] animate-float-blob-1" style={{ animationDelay: '4s' }} />
+        <div className="blob-bg blob-pink w-[300px] h-[300px] top-[20%] left-[40%] opacity-30 animate-float-blob-2" style={{ animationDelay: '2s' }} />
       </div>
 
-      <div className="pb-10 pt-6 flex items-center justify-center gap-2 text-white/40 animate-fade-in stagger-3">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div className="w-full max-w-sm">
+          <div className="animate-scale-in flex flex-col items-center">
+            <div className="relative">
+              <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-50 scale-110" />
+              <div className="relative w-20 h-20 gradient-primary rounded-3xl flex items-center justify-center shadow-2xl glow-primary">
+                <Heart size={36} className="text-white" strokeWidth={2.5} fill="white" />
+              </div>
+            </div>
+            <h1 className="text-text text-4xl font-bold text-center mt-6 tracking-tight">
+              Rehab<span className="gradient-text-primary">Diary</span>
+            </h1>
+            <p className="text-text-secondary text-center mt-2 text-sm max-w-[260px]">
+              Il tuo compagno quotidiano nel percorso di riabilitazione
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 animate-fade-in stagger-2">
+            <div className="glass-strong rounded-3xl p-5 space-y-3">
+              <div className="bg-stone-100/60 rounded-2xl p-1 flex">
+                <button
+                  type="button"
+                  onClick={() => setMode('patient')}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    mode === 'patient'
+                      ? 'gradient-primary text-white shadow-lg shadow-primary/30'
+                      : 'text-text-secondary'
+                  }`}
+                >
+                  Paziente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('admin')}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    mode === 'admin'
+                      ? 'gradient-primary text-white shadow-lg shadow-primary/30'
+                      : 'text-text-secondary'
+                  }`}
+                >
+                  Terapista
+                </button>
+              </div>
+
+              <div className="space-y-2.5 pt-1">
+                {isRegister && (
+                  <input
+                    type="text"
+                    placeholder="Nome completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+                  />
+                )}
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-danger/10 border border-danger/30 rounded-2xl px-4 py-2.5">
+                  <p className="text-danger text-sm font-medium">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full gradient-primary text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 glow-primary disabled:opacity-60"
+              >
+                {loading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : isRegister ? (
+                  <>
+                    <UserPlus size={18} />
+                    Crea account
+                  </>
+                ) : (
+                  <>
+                    Accedi
+                    <ArrowRight size={18} />
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsRegister(!isRegister); setError(''); }}
+                className="w-full text-text-secondary text-sm py-1.5 font-medium hover:text-primary transition-colors"
+              >
+                {isRegister ? 'Hai già un account? Accedi' : 'Non hai un account? Registrati'}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 mt-5 px-1">
+              <div className="flex-1 h-px bg-text-muted/20" />
+              <span className="text-text-muted text-xs flex items-center gap-1">
+                <Sparkles size={12} />
+                prova senza account
+              </span>
+              <div className="flex-1 h-px bg-text-muted/20" />
+            </div>
+
+            <div className="flex gap-2.5 mt-3">
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('patient')}
+                className="flex-1 glass rounded-2xl py-3 text-sm font-semibold text-text active:scale-95 transition-transform"
+              >
+                Demo Paziente
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDemoLogin('admin')}
+                className="flex-1 glass rounded-2xl py-3 text-sm font-semibold text-text active:scale-95 transition-transform"
+              >
+                Demo Terapista
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div className="pb-10 pt-4 flex items-center justify-center gap-2 text-text-muted animate-fade-in stagger-3">
         <Shield size={14} />
         <span className="text-xs">I tuoi dati sono protetti e crittografati</span>
       </div>

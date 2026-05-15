@@ -11,6 +11,7 @@ import {
   Video,
   FileText,
   Sparkles,
+  ArrowUpRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -31,8 +32,8 @@ export default function HomePage() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -48,59 +49,65 @@ export default function HomePage() {
   const lastMood = lastEntry?.mood;
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
-      <header className="bg-gradient-to-br from-primary to-primary-dark px-5 pt-14 pb-8 rounded-b-3xl">
+    <div className="min-h-screen pb-32 relative">
+      <header className="px-5 pt-14 pb-6 relative animate-fade-in">
         <div className="mx-auto max-w-md">
-          <p className="text-primary-light/80 text-sm font-medium capitalize">{dateStr}</p>
-          <h1 className="text-white text-2xl font-bold mt-1">
-            {greeting}, {name}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-text-secondary text-sm font-medium capitalize">{dateStr}</p>
+            {lastMood && (
+              <div className="glass rounded-full px-3 py-1.5 flex items-center gap-1.5">
+                <span className="text-base">{moodEmojis[lastMood]}</span>
+                <span className="text-text-secondary text-xs font-medium">
+                  {moodLabels[lastMood]}
+                </span>
+              </div>
+            )}
+          </div>
+          <h1 className="text-text text-3xl font-bold tracking-tight">
+            {greeting},
           </h1>
-          {lastMood && (
-            <div className="flex items-center gap-2 mt-3 bg-white/15 rounded-xl px-3 py-2 w-fit">
-              <span className="text-lg">{moodEmojis[lastMood]}</span>
-              <span className="text-white/90 text-sm">
-                Ultimo umore: {moodLabels[lastMood]}
-              </span>
-            </div>
-          )}
+          <h2 className="text-4xl font-bold tracking-tight gradient-text-primary leading-tight">
+            {name} 👋
+          </h2>
         </div>
       </header>
 
-      <main className="px-5 -mt-4 mx-auto max-w-md space-y-5">
+      <main className="px-5 mx-auto max-w-md space-y-5">
         {!completed ? (
           <button
             onClick={() => router.push('/diario')}
-            className="w-full bg-surface rounded-2xl p-5 shadow-lg shadow-primary/10 border border-primary/20 text-left animate-fade-in active:scale-[0.98] transition-transform"
+            className="w-full relative overflow-hidden rounded-3xl text-left animate-fade-in active:scale-[0.98] transition-all group"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                    <BookOpen size={20} className="text-accent" />
+            <div className="absolute inset-0 gradient-primary" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+            <div className="relative p-6 text-white">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 mb-3">
+                    <Sparkles size={12} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider">2 minuti</span>
                   </div>
-                  <div>
-                    <p className="font-semibold text-text">Diario di oggi</p>
-                    <p className="text-sm text-text-secondary">Compila il tuo report giornaliero</p>
-                  </div>
+                  <p className="text-2xl font-bold leading-tight">Diario di oggi</p>
+                  <p className="text-white/80 text-sm mt-1">Compila il tuo report giornaliero</p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-active:translate-x-1 transition-transform">
+                  <ArrowUpRight size={20} />
                 </div>
               </div>
-              <ChevronRight size={20} className="text-text-muted mt-2" />
-            </div>
-            <div className="mt-4 flex items-center gap-2 bg-accent/10 rounded-xl px-3 py-2">
-              <Sparkles size={16} className="text-accent" />
-              <span className="text-sm font-medium text-accent">
-                Ci vogliono solo 2 minuti
-              </span>
             </div>
           </button>
         ) : (
-          <div className="w-full bg-surface rounded-2xl p-5 shadow-sm border border-success/20 animate-fade-in">
+          <div className="w-full glass-strong rounded-3xl p-5 animate-fade-in">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-success-light flex items-center justify-center">
-                <CheckCircle2 size={24} className="text-success" />
+              <div className="relative">
+                <div className="absolute inset-0 bg-success rounded-2xl blur-lg opacity-30" />
+                <div className="relative w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-success/30">
+                  <CheckCircle2 size={24} className="text-white" strokeWidth={2.5} />
+                </div>
               </div>
               <div>
-                <p className="font-semibold text-text">Diario completato!</p>
+                <p className="font-bold text-text">Diario completato!</p>
                 <p className="text-sm text-text-secondary">Ottimo lavoro, continua così</p>
               </div>
             </div>
@@ -108,41 +115,41 @@ export default function HomePage() {
         )}
 
         <div className="grid grid-cols-3 gap-3 animate-fade-in stagger-1">
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto">
-              <Flame size={20} className="text-accent" />
-            </div>
-            <p className="text-2xl font-bold text-text mt-2">{streak}</p>
-            <p className="text-xs text-text-secondary mt-0.5">Giorni streak</p>
-          </div>
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-              <TrendingUp size={20} className="text-primary" />
-            </div>
-            <p className="text-2xl font-bold text-text mt-2">{compliance}%</p>
-            <p className="text-xs text-text-secondary mt-0.5">Aderenza</p>
-          </div>
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-              <BookOpen size={20} className="text-primary" />
-            </div>
-            <p className="text-2xl font-bold text-text mt-2">{entries.filter(e => e.completedAt).length}</p>
-            <p className="text-xs text-text-secondary mt-0.5">Report totali</p>
-          </div>
+          <StatCard
+            icon={<Flame size={20} className="text-white" strokeWidth={2.5} />}
+            iconGradient="gradient-warm"
+            value={streak}
+            label="Giorni streak"
+          />
+          <StatCard
+            icon={<TrendingUp size={20} className="text-white" strokeWidth={2.5} />}
+            iconGradient="gradient-primary"
+            value={`${compliance}%`}
+            label="Aderenza"
+          />
+          <StatCard
+            icon={<BookOpen size={20} className="text-white" strokeWidth={2.5} />}
+            iconGradient="gradient-cool"
+            value={entries.filter(e => e.completedAt).length}
+            label="Report totali"
+          />
         </div>
 
         <div className="space-y-3 animate-fade-in stagger-2">
-          <h2 className="text-lg font-semibold text-text px-1">Accesso rapido</h2>
+          <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">Accesso rapido</h2>
 
           <button
             onClick={() => router.push('/contratto')}
-            className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+            className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
           >
-            <div className="w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
-              <FileText size={20} className="text-primary" />
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 gradient-primary rounded-2xl blur-md opacity-40" />
+              <div className="relative w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center">
+                <FileText size={20} className="text-white" strokeWidth={2.5} />
+              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-text">Il mio contratto</p>
+              <p className="font-bold text-text">Il mio contratto</p>
               <p className="text-sm text-text-secondary truncate">Visualizza i tuoi impegni</p>
             </div>
             <ChevronRight size={18} className="text-text-muted shrink-0" />
@@ -150,13 +157,16 @@ export default function HomePage() {
 
           <button
             onClick={() => router.push('/video')}
-            className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+            className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
           >
-            <div className="w-11 h-11 rounded-xl bg-accent-light flex items-center justify-center shrink-0">
-              <Video size={20} className="text-accent" />
+            <div className="relative shrink-0">
+              <div className="absolute inset-0 gradient-warm rounded-2xl blur-md opacity-40" />
+              <div className="relative w-12 h-12 rounded-2xl gradient-warm flex items-center justify-center">
+                <Video size={20} className="text-white" strokeWidth={2.5} />
+              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-text">I miei video</p>
+              <p className="font-bold text-text">I miei video</p>
               <p className="text-sm text-text-secondary truncate">Carica e rivedi le sedute</p>
             </div>
             <ChevronRight size={18} className="text-text-muted shrink-0" />
@@ -165,20 +175,22 @@ export default function HomePage() {
 
         {entries.length > 0 && (
           <div className="space-y-3 animate-fade-in stagger-3">
-            <h2 className="text-lg font-semibold text-text px-1">Ultimi report</h2>
+            <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">Ultimi report</h2>
             {entries
               .filter((e) => e.completedAt)
               .slice(0, 3)
-              .map((entry) => (
+              .map((entry, i) => (
                 <div
                   key={entry.id}
-                  className="bg-surface rounded-2xl p-4 shadow-sm"
+                  className={`glass rounded-3xl p-4 animate-fade-in stagger-${Math.min(i + 4, 6)}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{moodEmojis[entry.mood || 3]}</span>
+                      <div className="w-11 h-11 rounded-2xl bg-white/60 flex items-center justify-center text-2xl">
+                        {moodEmojis[entry.mood || 3]}
+                      </div>
                       <div>
-                        <p className="font-medium text-sm text-text capitalize">
+                        <p className="font-bold text-sm text-text capitalize">
                           {format(new Date(entry.date), 'EEEE d MMM', { locale: it })}
                         </p>
                         <p className="text-xs text-text-secondary mt-0.5">
@@ -192,7 +204,7 @@ export default function HomePage() {
                       {entry.contractResponses.slice(0, 4).map((r, i) => (
                         <div
                           key={i}
-                          className={`w-2.5 h-2.5 rounded-full ${
+                          className={`w-2 h-2 rounded-full ${
                             r.response === 'yes'
                               ? 'bg-success'
                               : r.response === 'partial'
@@ -204,8 +216,8 @@ export default function HomePage() {
                     </div>
                   </div>
                   {entry.notes && (
-                    <p className="text-xs text-text-secondary mt-2 line-clamp-1 italic">
-                      &ldquo;{entry.notes}&rdquo;
+                    <p className="text-xs text-text-secondary mt-2 line-clamp-1 italic pl-1 border-l-2 border-primary/30 ml-1 pl-3">
+                      {entry.notes}
                     </p>
                   )}
                 </div>
@@ -215,6 +227,31 @@ export default function HomePage() {
       </main>
 
       <BottomNav />
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  iconGradient,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  iconGradient: string;
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <div className="glass rounded-3xl p-4 text-center">
+      <div className="relative inline-block">
+        <div className={`absolute inset-0 ${iconGradient} rounded-2xl blur-md opacity-40`} />
+        <div className={`relative w-10 h-10 rounded-2xl ${iconGradient} flex items-center justify-center mx-auto`}>
+          {icon}
+        </div>
+      </div>
+      <p className="text-2xl font-bold text-text mt-2 tracking-tight">{value}</p>
+      <p className="text-[10px] text-text-secondary mt-0.5 font-medium">{label}</p>
     </div>
   );
 }

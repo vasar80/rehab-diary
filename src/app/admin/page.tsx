@@ -30,14 +30,12 @@ export default function AdminPage() {
   const [selectedPatient, setSelectedPatient] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'risposte' | 'contratto' | 'video'>('risposte');
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -51,61 +49,65 @@ export default function AdminPage() {
     const patientContract = mockContractItems.filter((ci) => ci.patientId === selectedPatient);
 
     return (
-      <div className="min-h-screen bg-bg pb-8">
-        <header className="px-5 pt-14 pb-4">
-          <div className="mx-auto max-w-md flex items-center">
-            <button onClick={() => setSelectedPatient(null)} className="p-2 -ml-2 rounded-xl">
-              <ArrowLeft size={22} className="text-text" />
+      <div className="min-h-screen pb-12 relative">
+        <header className="px-5 pt-14 pb-4 animate-fade-in">
+          <div className="mx-auto max-w-md flex items-center gap-3">
+            <button onClick={() => setSelectedPatient(null)} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform">
+              <ArrowLeft size={20} className="text-text" />
             </button>
-            <h1 className="text-lg font-semibold text-text ml-2">{patient.name}</h1>
+            <h1 className="text-xl font-bold text-text">{patient.name}</h1>
           </div>
         </header>
 
         <main className="px-5 mx-auto max-w-md space-y-4">
-          <div className="bg-gradient-to-br from-primary to-primary-dark rounded-2xl p-5 text-white">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                {patient.name.charAt(0)}
+          <div className="relative overflow-hidden rounded-3xl animate-fade-in">
+            <div className="absolute inset-0 gradient-primary" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/15 rounded-full blur-2xl" />
+            <div className="relative p-5 text-white">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center text-2xl font-bold shrink-0">
+                  {patient.name.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-bold">{patient.name}</h2>
+                  <p className="text-white/80 text-sm truncate">{patient.email}</p>
+                  <p className="text-white/60 text-xs mt-1">
+                    Dal {format(new Date(patient.startDate), 'd MMMM yyyy', { locale: it })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold">{patient.name}</h2>
-                <p className="text-white/70 text-sm">{patient.email}</p>
-                <p className="text-white/50 text-xs mt-1">
-                  Dal {format(new Date(patient.startDate), 'd MMMM yyyy', { locale: it })}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mt-4">
-              <div className="bg-white/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold">{patientEntries.length}</p>
-                <p className="text-[10px] text-white/60">Report</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold">{patientVideos.length}</p>
-                <p className="text-[10px] text-white/60">Video</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-3 text-center">
-                <p className="text-xl font-bold">
-                  {patientEntries.length > 0
-                    ? Math.round(
-                        (patientEntries.filter((e) => e.didTherapy).length / patientEntries.length) * 100
-                      )
-                    : 0}
-                  %
-                </p>
-                <p className="text-[10px] text-white/60">Aderenza</p>
+              <div className="grid grid-cols-3 gap-2.5 mt-4">
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
+                  <p className="text-2xl font-bold">{patientEntries.length}</p>
+                  <p className="text-[10px] text-white/70 uppercase font-bold tracking-wider mt-0.5">Report</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
+                  <p className="text-2xl font-bold">{patientVideos.length}</p>
+                  <p className="text-[10px] text-white/70 uppercase font-bold tracking-wider mt-0.5">Video</p>
+                </div>
+                <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 text-center">
+                  <p className="text-2xl font-bold">
+                    {patientEntries.length > 0
+                      ? Math.round(
+                          (patientEntries.filter((e) => e.didTherapy).length / patientEntries.length) * 100
+                        )
+                      : 0}
+                    %
+                  </p>
+                  <p className="text-[10px] text-white/70 uppercase font-bold tracking-wider mt-0.5">Aderenza</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-surface rounded-xl p-1 flex gap-1">
+          <div className="glass rounded-2xl p-1 flex gap-1">
             {(['risposte', 'contratto', 'video'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all capitalize ${
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all capitalize ${
                   activeTab === tab
-                    ? 'bg-primary text-white shadow-sm'
+                    ? 'gradient-primary text-white shadow-lg shadow-primary/30'
                     : 'text-text-secondary'
                 }`}
               >
@@ -117,17 +119,17 @@ export default function AdminPage() {
           {activeTab === 'risposte' && (
             <div className="space-y-3 animate-fade-in">
               {patientEntries.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-text-secondary">Nessun report disponibile</p>
-                </div>
+                <div className="text-center py-12 text-text-secondary">Nessun report disponibile</div>
               ) : (
                 patientEntries.map((entry) => (
-                  <div key={entry.id} className="bg-surface rounded-2xl p-4 shadow-sm">
+                  <div key={entry.id} className="glass rounded-3xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{moodEmojis[entry.mood || 3]}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center text-xl">
+                          {moodEmojis[entry.mood || 3]}
+                        </div>
                         <div>
-                          <p className="font-semibold text-sm text-text capitalize">
+                          <p className="font-bold text-sm text-text capitalize">
                             {format(new Date(entry.date), 'EEEE d MMM', { locale: it })}
                           </p>
                           <p className="text-xs text-text-secondary">
@@ -138,7 +140,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                       {entry.noticedCompensations && (
-                        <span className="bg-warning-light text-warning text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                        <span className="gradient-warm text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
                           Compensi
                         </span>
                       )}
@@ -152,18 +154,18 @@ export default function AdminPage() {
                             <div
                               className={`w-5 h-5 rounded-md flex items-center justify-center ${
                                 r.response === 'yes'
-                                  ? 'bg-success-light'
+                                  ? 'bg-success/20'
                                   : r.response === 'partial'
-                                  ? 'bg-warning-light'
-                                  : 'bg-danger-light'
+                                  ? 'bg-warning/20'
+                                  : 'bg-danger/20'
                               }`}
                             >
                               {r.response === 'yes' ? (
-                                <Check size={12} className="text-success" />
+                                <Check size={12} className="text-success" strokeWidth={3} />
                               ) : r.response === 'partial' ? (
-                                <Minus size={12} className="text-warning" />
+                                <Minus size={12} className="text-warning" strokeWidth={3} />
                               ) : (
-                                <X size={12} className="text-danger" />
+                                <X size={12} className="text-danger" strokeWidth={3} />
                               )}
                             </div>
                             <span className="text-xs text-text-secondary truncate">
@@ -175,13 +177,13 @@ export default function AdminPage() {
                     </div>
 
                     {entry.compensationNotes && (
-                      <div className="mt-3 bg-warning-light/50 rounded-lg p-2">
-                        <p className="text-xs text-text-secondary italic">{entry.compensationNotes}</p>
+                      <div className="mt-3 glass-tinted-warm rounded-2xl p-3">
+                        <p className="text-xs text-text italic">{entry.compensationNotes}</p>
                       </div>
                     )}
                     {entry.notes && (
-                      <div className="mt-2 bg-bg-warm rounded-lg p-2">
-                        <p className="text-xs text-text-secondary italic">{entry.notes}</p>
+                      <div className="mt-2 bg-white/60 rounded-2xl p-3">
+                        <p className="text-xs text-text italic">{entry.notes}</p>
                       </div>
                     )}
                   </div>
@@ -193,18 +195,19 @@ export default function AdminPage() {
           {activeTab === 'contratto' && (
             <div className="space-y-3 animate-fade-in">
               {patientContract.map((item) => (
-                <div key={item.id} className="bg-surface rounded-2xl p-4 shadow-sm flex items-start gap-3">
+                <div key={item.id} className="glass rounded-3xl p-4 flex items-start gap-3">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                      item.type === 'general' ? 'bg-primary/10 text-primary' : 'bg-accent/10 text-accent'
-                    }`}
+                    className={`relative shrink-0`}
                   >
-                    {item.type === 'general' ? <BookOpen size={16} /> : <TrendingUp size={16} />}
+                    <div className={`absolute inset-0 ${item.type === 'general' ? 'gradient-primary' : 'gradient-warm'} rounded-xl blur-md opacity-40`} />
+                    <div className={`relative w-9 h-9 rounded-xl ${item.type === 'general' ? 'gradient-primary' : 'gradient-warm'} flex items-center justify-center`}>
+                      {item.type === 'general' ? <BookOpen size={16} className="text-white" /> : <TrendingUp size={16} className="text-white" />}
+                    </div>
                   </div>
-                  <div>
+                  <div className="pt-1">
                     <p className="text-sm text-text">{item.text}</p>
                     <span
-                      className={`text-[10px] font-semibold uppercase mt-1 inline-block ${
+                      className={`text-[10px] font-bold uppercase tracking-wider mt-1 inline-block ${
                         item.type === 'general' ? 'text-primary' : 'text-accent'
                       }`}
                     >
@@ -219,18 +222,16 @@ export default function AdminPage() {
           {activeTab === 'video' && (
             <div className="space-y-3 animate-fade-in">
               {patientVideos.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-text-secondary">Nessun video caricato</p>
-                </div>
+                <div className="text-center py-12 text-text-secondary">Nessun video caricato</div>
               ) : (
                 patientVideos.map((video) => (
-                  <div key={video.id} className="bg-surface rounded-2xl p-4 shadow-sm">
+                  <div key={video.id} className="glass rounded-3xl p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-12 bg-stone-200 rounded-lg flex items-center justify-center">
-                        <Video size={20} className="text-stone-400" />
+                      <div className="w-16 h-12 gradient-cool rounded-xl flex items-center justify-center">
+                        <Video size={18} className="text-white" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-text">{video.title}</p>
+                        <p className="text-sm font-bold text-text">{video.title}</p>
                         <p className="text-xs text-text-secondary mt-0.5">
                           {format(new Date(video.date), 'd MMM yyyy', { locale: it })}
                           {video.duration && ` · ${video.duration}`}
@@ -238,7 +239,9 @@ export default function AdminPage() {
                       </div>
                     </div>
                     {video.notes && (
-                      <p className="text-xs text-text-secondary mt-2 italic">{video.notes}</p>
+                      <p className="text-xs text-text-secondary mt-2 italic pl-3 border-l-2 border-primary/30">
+                        {video.notes}
+                      </p>
                     )}
                   </div>
                 ))
@@ -251,39 +254,48 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg pb-8">
-      <header className="bg-gradient-to-br from-primary to-primary-dark px-5 pt-14 pb-8 rounded-b-3xl">
+    <div className="min-h-screen pb-12 relative">
+      <header className="px-5 pt-14 pb-6 animate-fade-in">
         <div className="mx-auto max-w-md">
-          <p className="text-primary-light/80 text-sm font-medium">Dashboard terapista</p>
-          <h1 className="text-white text-2xl font-bold mt-1">
-            Ciao, {adminName}
+          <p className="text-text-secondary text-sm font-medium uppercase tracking-wider">Dashboard terapista</p>
+          <h1 className="text-text text-3xl font-bold mt-1 tracking-tight">
+            Ciao,
           </h1>
+          <h2 className="text-4xl font-bold gradient-text-primary leading-tight tracking-tight">
+            {adminName} 👋
+          </h2>
         </div>
       </header>
 
-      <main className="px-5 -mt-4 mx-auto max-w-md space-y-4">
+      <main className="px-5 mx-auto max-w-md space-y-5">
         <div className="grid grid-cols-2 gap-3 animate-fade-in">
-          <div className="bg-surface rounded-2xl p-4 shadow-sm text-center">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-              <Users size={20} className="text-primary" />
+          <div className="glass rounded-3xl p-4 text-center">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 gradient-primary rounded-2xl blur-md opacity-40" />
+              <div className="relative w-11 h-11 rounded-2xl gradient-primary flex items-center justify-center mx-auto">
+                <Users size={20} className="text-white" strokeWidth={2.5} />
+              </div>
             </div>
-            <p className="text-2xl font-bold text-text mt-2">{mockPatients.length}</p>
-            <p className="text-xs text-text-secondary">Pazienti attivi</p>
+            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{mockPatients.length}</p>
+            <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mt-0.5">Pazienti attivi</p>
           </div>
-          <div className="bg-surface rounded-2xl p-4 shadow-sm text-center">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto">
-              <BarChart3 size={20} className="text-accent" />
+          <div className="glass rounded-3xl p-4 text-center">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 gradient-warm rounded-2xl blur-md opacity-40" />
+              <div className="relative w-11 h-11 rounded-2xl gradient-warm flex items-center justify-center mx-auto">
+                <BarChart3 size={20} className="text-white" strokeWidth={2.5} />
+              </div>
             </div>
-            <p className="text-2xl font-bold text-text mt-2">{mockEntries.length}</p>
-            <p className="text-xs text-text-secondary">Report totali</p>
+            <p className="text-3xl font-bold text-text mt-3 tracking-tight">{mockEntries.length}</p>
+            <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mt-0.5">Report totali</p>
           </div>
         </div>
 
         <div className="space-y-3 animate-fade-in stagger-1">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-semibold text-text">I tuoi pazienti</h2>
-            <button className="p-2 rounded-xl">
-              <Filter size={18} className="text-text-muted" />
+            <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">I tuoi pazienti</h2>
+            <button className="glass w-9 h-9 rounded-2xl flex items-center justify-center active:scale-95 transition-transform">
+              <Filter size={14} className="text-text-secondary" />
             </button>
           </div>
 
@@ -296,13 +308,16 @@ export default function AdminPage() {
               <button
                 key={patient.id}
                 onClick={() => setSelectedPatient(patient.id)}
-                className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+                className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
               >
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-bold text-lg shrink-0">
-                  {patient.name.charAt(0)}
+                <div className="relative shrink-0">
+                  <div className="absolute inset-0 gradient-primary rounded-2xl blur-md opacity-40" />
+                  <div className="relative w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center text-white font-bold text-lg">
+                    {patient.name.charAt(0)}
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-text">{patient.name}</p>
+                  <p className="font-bold text-text">{patient.name}</p>
                   <div className="flex items-center gap-2 mt-1">
                     {lastMood && <span className="text-sm">{moodEmojis[lastMood]}</span>}
                     <p className="text-xs text-text-secondary truncate">
@@ -311,7 +326,7 @@ export default function AdminPage() {
                         : 'Nessun report'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-1 mt-1">
                     <Calendar size={10} className="text-text-muted" />
                     <p className="text-[10px] text-text-muted">
                       Dal {format(new Date(patient.startDate), 'd MMM yyyy', { locale: it })}
@@ -319,7 +334,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold gradient-primary text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
                     {patientEntries.length} report
                   </span>
                   <ChevronRight size={16} className="text-text-muted" />
@@ -331,7 +346,7 @@ export default function AdminPage() {
 
         <button
           onClick={() => router.push('/')}
-          className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center justify-center gap-2 text-text-secondary font-medium active:scale-[0.98] transition-transform animate-fade-in stagger-3"
+          className="w-full glass rounded-3xl p-4 flex items-center justify-center gap-2 text-text-secondary font-semibold active:scale-[0.98] transition-transform animate-fade-in stagger-3"
         >
           <ArrowLeft size={16} />
           Torna alla vista paziente

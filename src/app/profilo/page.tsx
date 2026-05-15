@@ -3,14 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  User,
   FileText,
-  Shield,
   LogOut,
   ChevronRight,
   Heart,
   Calendar,
-  Settings,
   LayoutDashboard,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -23,14 +20,12 @@ export default function ProfiloPage() {
   const { user, setUser, entries, contractItems } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -48,6 +43,7 @@ export default function ProfiloPage() {
       role: 'admin',
       name: 'Dr.ssa Laura Bianchi',
       email: 'l.bianchi@rehabclinic.it',
+      isDemo: true,
     });
     router.push('/admin');
   }
@@ -58,6 +54,7 @@ export default function ProfiloPage() {
       role: 'patient',
       name: 'Mario Rossi',
       email: 'mario.rossi@email.it',
+      isDemo: true,
     });
     router.push('/');
   }
@@ -68,129 +65,148 @@ export default function ProfiloPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
-      <header className="bg-gradient-to-br from-primary to-primary-dark px-5 pt-14 pb-8 rounded-b-3xl">
+    <div className="min-h-screen pb-32 relative">
+      <header className="px-5 pt-14 pb-6 animate-fade-in">
         <div className="mx-auto max-w-md flex flex-col items-center">
-          <div className="w-20 h-20 bg-white/15 rounded-2xl flex items-center justify-center text-2xl font-bold text-white backdrop-blur-sm">
-            {initials}
+          <div className="relative">
+            <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-50 scale-125" />
+            <div className="relative w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl glow-primary">
+              {initials}
+            </div>
           </div>
-          <h1 className="text-white text-xl font-bold mt-3">{name}</h1>
-          <p className="text-white/60 text-sm">{email}</p>
-          <span className="mt-2 bg-white/15 text-white/90 text-xs font-semibold px-3 py-1 rounded-full capitalize">
+          <h1 className="text-text text-2xl font-bold mt-4">{name}</h1>
+          <p className="text-text-secondary text-sm mt-0.5">{email}</p>
+          <span className="mt-3 glass rounded-full px-4 py-1 text-xs font-bold text-primary uppercase tracking-wider">
             {role === 'admin' ? 'Terapista' : 'Paziente'}
           </span>
         </div>
       </header>
 
-      <main className="px-5 -mt-4 mx-auto max-w-md space-y-4">
+      <main className="px-5 mx-auto max-w-md space-y-5">
         <div className="grid grid-cols-3 gap-3 animate-fade-in">
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-text">{completedEntries}</p>
-            <p className="text-xs text-text-secondary mt-0.5">Report</p>
-          </div>
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-text">{activeContracts}</p>
-            <p className="text-xs text-text-secondary mt-0.5">Impegni</p>
-          </div>
-          <div className="bg-surface rounded-2xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-text">
-              {format(new Date('2025-04-01'), 'dd/MM', { locale: it })}
-            </p>
-            <p className="text-xs text-text-secondary mt-0.5">Inizio</p>
-          </div>
+          <StatBox value={completedEntries} label="Report" />
+          <StatBox value={activeContracts} label="Impegni" />
+          <StatBox value={format(new Date('2025-04-01'), 'dd/MM', { locale: it })} label="Inizio" />
         </div>
 
-        <div className="space-y-2 animate-fade-in stagger-1">
-          <h2 className="text-sm font-semibold text-text-secondary px-1 uppercase tracking-wider">Il mio percorso</h2>
-
-          <button
+        <Section title="Il mio percorso" stagger={1}>
+          <ListItem
+            icon={<FileText size={20} className="text-white" strokeWidth={2.5} />}
+            gradient="gradient-primary"
+            title="Il mio contratto"
+            subtitle={`${activeContracts} impegni attivi`}
             onClick={() => router.push('/contratto')}
-            className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <FileText size={20} className="text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-text text-sm">Il mio contratto</p>
-              <p className="text-xs text-text-secondary">{activeContracts} impegni attivi</p>
-            </div>
-            <ChevronRight size={16} className="text-text-muted" />
-          </button>
-
-          <button
+          />
+          <ListItem
+            icon={<Calendar size={20} className="text-white" strokeWidth={2.5} />}
+            gradient="gradient-warm"
+            title="Storico report"
+            subtitle={`${completedEntries} compilazioni`}
             onClick={() => router.push('/video')}
-            className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-              <Calendar size={20} className="text-accent" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-text text-sm">Storico report</p>
-              <p className="text-xs text-text-secondary">{completedEntries} compilazioni</p>
-            </div>
-            <ChevronRight size={16} className="text-text-muted" />
-          </button>
-        </div>
+          />
+        </Section>
 
-        <div className="space-y-2 animate-fade-in stagger-2">
-          <h2 className="text-sm font-semibold text-text-secondary px-1 uppercase tracking-wider">Cambia vista</h2>
-
+        <Section title="Cambia vista" stagger={2}>
           {role !== 'admin' ? (
-            <button
+            <ListItem
+              icon={<LayoutDashboard size={20} className="text-white" strokeWidth={2.5} />}
+              gradient="gradient-cool"
+              title="Dashboard Terapista"
+              subtitle="Visualizza i dati dei pazienti"
               onClick={handleSwitchToAdmin}
-              className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left border border-primary/20"
-            >
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <LayoutDashboard size={20} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-text text-sm">Dashboard Terapista</p>
-                <p className="text-xs text-text-secondary">Visualizza i dati dei pazienti</p>
-              </div>
-              <ChevronRight size={16} className="text-text-muted" />
-            </button>
+            />
           ) : (
-            <button
+            <ListItem
+              icon={<Heart size={20} className="text-white" strokeWidth={2.5} />}
+              gradient="gradient-primary"
+              title="Vista Paziente"
+              subtitle="Torna al diario"
               onClick={handleSwitchToPatient}
-              className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left border border-primary/20"
-            >
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Heart size={20} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold text-text text-sm">Vista Paziente</p>
-                <p className="text-xs text-text-secondary">Torna al diario</p>
-              </div>
-              <ChevronRight size={16} className="text-text-muted" />
-            </button>
+            />
           )}
-        </div>
+        </Section>
 
-        <div className="space-y-2 animate-fade-in stagger-3">
-          <h2 className="text-sm font-semibold text-text-secondary px-1 uppercase tracking-wider">Account</h2>
-          <button
+        <Section title="Account" stagger={3}>
+          <ListItem
+            icon={<LogOut size={20} className="text-white" strokeWidth={2.5} />}
+            gradient="gradient-sunset"
+            title="Esci"
+            subtitle="Disconnetti il tuo account"
             onClick={handleLogout}
-            className="w-full bg-surface rounded-2xl p-4 shadow-sm flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="w-10 h-10 rounded-xl bg-danger-light flex items-center justify-center shrink-0">
-              <LogOut size={20} className="text-danger" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-text text-sm">Esci</p>
-              <p className="text-xs text-text-secondary">Disconnetti il tuo account</p>
-            </div>
-          </button>
-        </div>
+            noChevron
+          />
+        </Section>
 
-        <div className="text-center pt-4 animate-fade-in stagger-4">
+        <div className="text-center pt-2 animate-fade-in stagger-4">
           <div className="flex items-center justify-center gap-1.5 text-text-muted">
-            <Heart size={12} />
-            <span className="text-xs">RehabDiary v1.0</span>
+            <Heart size={12} className="text-primary" fill="currentColor" />
+            <span className="text-xs font-medium">RehabDiary v1.0</span>
           </div>
         </div>
       </main>
 
       <BottomNav />
     </div>
+  );
+}
+
+function StatBox({ value, label }: { value: number | string; label: string }) {
+  return (
+    <div className="glass rounded-3xl p-4 text-center">
+      <p className="text-2xl font-bold text-text tracking-tight">{value}</p>
+      <p className="text-[10px] text-text-secondary mt-0.5 font-semibold uppercase tracking-wider">{label}</p>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+  stagger,
+}: {
+  title: string;
+  children: React.ReactNode;
+  stagger: number;
+}) {
+  return (
+    <div className={`space-y-2 animate-fade-in stagger-${stagger}`}>
+      <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function ListItem({
+  icon,
+  gradient,
+  title,
+  subtitle,
+  onClick,
+  noChevron,
+}: {
+  icon: React.ReactNode;
+  gradient: string;
+  title: string;
+  subtitle: string;
+  onClick?: () => void;
+  noChevron?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+    >
+      <div className="relative shrink-0">
+        <div className={`absolute inset-0 ${gradient} rounded-2xl blur-md opacity-40`} />
+        <div className={`relative w-11 h-11 rounded-2xl ${gradient} flex items-center justify-center`}>
+          {icon}
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-text text-sm">{title}</p>
+        <p className="text-xs text-text-secondary truncate">{subtitle}</p>
+      </div>
+      {!noChevron && <ChevronRight size={16} className="text-text-muted shrink-0" />}
+    </button>
   );
 }
