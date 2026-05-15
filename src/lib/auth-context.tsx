@@ -74,13 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
     if (role === 'patient') {
-      await savePatient({
-        id: cred.user.uid,
-        name,
-        email,
-        startDate: new Date().toISOString().split('T')[0],
-        therapistId: '',
-      });
+      try {
+        await Promise.race([
+          savePatient({
+            id: cred.user.uid,
+            name,
+            email,
+            startDate: new Date().toISOString().split('T')[0],
+            therapistId: '',
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
+        ]);
+      } catch {
+        console.warn('Could not save patient to Firestore, will retry later');
+      }
     }
     setUser({
       uid: cred.user.uid,
