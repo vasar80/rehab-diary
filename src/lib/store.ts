@@ -9,6 +9,7 @@ import {
   getDailyEntries,
   getVideos,
   saveDailyEntry,
+  deleteDailyEntry,
   saveVideo as saveVideoToFirestore,
 } from './firestore';
 
@@ -43,6 +44,7 @@ interface AppState {
   updateDiaryDraft: (updates: Partial<DiaryDraft>) => void;
   resetDiaryDraft: () => void;
   submitDiary: () => void;
+  resetTodayEntry: () => Promise<void>;
 
   addVideo: (video: RehabVideo) => void;
   addContractItem: (item: ContractItem) => void;
@@ -179,6 +181,23 @@ export const useAppStore = create<AppState>()(
               ),
             }));
           }).catch((err) => console.warn('Failed to save entry to Firestore:', err));
+        }
+      },
+
+      resetTodayEntry: async () => {
+        const { entries, user } = get();
+        const today = todayStr();
+        const todayEntry = entries.find((e) => e.date === today);
+        set({
+          entries: entries.filter((e) => e.date !== today),
+          diaryDraft: { ...emptyDraft },
+        });
+        if (todayEntry && user && !user.isDemo) {
+          try {
+            await deleteDailyEntry(todayEntry.id);
+          } catch (err) {
+            console.warn('Failed to delete entry from Firestore:', err);
+          }
         }
       },
 

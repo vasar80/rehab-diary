@@ -6,6 +6,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -108,6 +109,12 @@ export async function saveDailyEntry(entry: DailyEntry): Promise<string> {
   }
   const ref = await addDoc(collection(db, 'dailyEntries'), data);
   return ref.id;
+}
+
+export async function deleteDailyEntry(entryId: string): Promise<void> {
+  if (entryId && !entryId.startsWith('entry-')) {
+    await deleteDoc(doc(db, 'dailyEntries', entryId));
+  }
 }
 
 export async function getTodayEntry(patientId: string): Promise<DailyEntry | null> {

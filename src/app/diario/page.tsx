@@ -11,6 +11,7 @@ import {
   MessageSquare,
   PartyPopper,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { ContractResponse } from '@/lib/types';
@@ -42,7 +43,9 @@ export default function DiarioPage() {
     submitDiary,
     contractItems,
     todayCompleted,
+    resetTodayEntry,
   } = useAppStore();
+  const [resetting, setResetting] = useState(false);
 
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -125,6 +128,14 @@ export default function DiarioPage() {
   }
 
   if (todayCompleted() && !submitted) {
+    const handleReset = async () => {
+      setResetting(true);
+      await resetTodayEntry();
+      setStep(0);
+      setDirection(1);
+      setResetting(false);
+    };
+
     return (
       <div className="min-h-screen flex flex-col">
         <header className="px-5 pt-14 pb-4">
@@ -144,14 +155,24 @@ export default function DiarioPage() {
           </div>
           <h2 className="text-2xl font-bold text-text mt-6">Già completato!</h2>
           <p className="text-text-secondary text-center mt-2">
-            Hai già compilato il diario per oggi. Torna domani!
+            Hai già compilato il diario per oggi.
           </p>
-          <button
-            onClick={() => router.push('/')}
-            className="mt-8 gradient-primary text-white px-8 py-3.5 rounded-2xl font-semibold shadow-lg shadow-primary/30 glow-primary active:scale-[0.98] transition-all"
-          >
-            Torna alla home
-          </button>
+          <div className="w-full space-y-2.5 mt-8">
+            <button
+              onClick={() => router.push('/')}
+              className="w-full gradient-primary text-white px-8 py-3.5 rounded-2xl font-semibold shadow-lg shadow-primary/30 glow-primary active:scale-[0.98] transition-all"
+            >
+              Torna alla home
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={resetting}
+              className="w-full glass text-text px-8 py-3 rounded-2xl font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-60"
+            >
+              <RotateCcw size={16} className={resetting ? 'animate-spin' : ''} />
+              {resetting ? 'Reset in corso…' : 'Rifai diario di oggi'}
+            </button>
+          </div>
         </div>
       </div>
     );
