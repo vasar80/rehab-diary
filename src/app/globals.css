@@ -62,11 +62,12 @@ body::before {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(ellipse 80% 60% at 15% 0%, rgba(45, 212, 191, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 10%, rgba(251, 146, 60, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 60% at 0% 100%, rgba(168, 85, 247, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 70% at 100% 100%, rgba(236, 72, 153, 0.18) 0%, transparent 55%),
-    linear-gradient(180deg, #fafaf9 0%, #f5f5f4 100%);
+    radial-gradient(ellipse 60% 40% at 10% -5%, rgba(45, 212, 191, 0.65) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 95% 5%, rgba(251, 146, 60, 0.5) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 50%, rgba(236, 72, 153, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 5% 60%, rgba(168, 85, 247, 0.42) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(56, 189, 248, 0.45) 0%, transparent 60%),
+    linear-gradient(180deg, #faf7f5 0%, #f5f5f4 100%);
   background-attachment: fixed;
 }
 
@@ -88,14 +89,14 @@ input, textarea, select {
 /* === Glassmorphism utilities === */
 
 .glass {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.8) inset,
-    0 8px 32px -8px rgba(15, 118, 110, 0.08),
-    0 2px 8px -2px rgba(15, 23, 42, 0.04);
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 8px 32px -8px rgba(15, 118, 110, 0.12),
+    0 2px 8px -2px rgba(15, 23, 42, 0.06);
 }
 
 .glass-soft {
@@ -109,14 +110,14 @@ input, textarea, select {
 }
 
 .glass-strong {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(32px) saturate(200%);
   -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 12px 40px -8px rgba(15, 23, 42, 0.1),
-    0 4px 12px -2px rgba(15, 23, 42, 0.05);
+    0 1px 0 rgba(255, 255, 255, 1) inset,
+    0 12px 40px -8px rgba(15, 23, 42, 0.12),
+    0 4px 12px -2px rgba(15, 23, 42, 0.06);
 }
 
 .glass-tinted-primary {
