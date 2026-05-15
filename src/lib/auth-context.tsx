@@ -18,6 +18,7 @@ interface AuthUser {
   email: string;
   displayName: string;
   role: UserRole;
+  sex?: 'M' | 'F';
   patientId?: string;
 }
 
@@ -26,7 +27,7 @@ interface AuthContextType {
   firebaseUser: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: UserRole) => Promise<void>;
+  register: (email: string, password: string, name: string, role: UserRole, sex?: 'M' | 'F') => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -51,11 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const role: UserRole = fbUser.email?.includes('admin') || fbUser.email?.includes('therapist')
           ? 'admin'
           : 'patient';
+        let sex: 'M' | 'F' | undefined;
+        if (role === 'patient') {
+          try {
+            const patient = await getPatient(fbUser.uid);
+            sex = patient?.sex;
+          } catch {}
+        }
         setUser({
           uid: fbUser.uid,
           email: fbUser.email || '',
           displayName: fbUser.displayName || fbUser.email?.split('@')[0] || '',
           role,
+          sex,
           patientId: role === 'patient' ? fbUser.uid : undefined,
         });
       } else {
@@ -70,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function register(email: string, password: string, name: string, role: UserRole) {
+  async function register(email: string, password: string, name: string, role: UserRole, sex?: 'M' | 'F') {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
     if (role === 'patient') {
@@ -80,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: cred.user.uid,
             name,
             email,
+            sex,
             startDate: new Date().toISOString().split('T')[0],
             therapistId: '',
           }),
@@ -94,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       displayName: name,
       role,
+      sex,
       patientId: role === 'patient' ? cred.user.uid : undefined,
     });
   }

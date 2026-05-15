@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AppUser, ContractItem, DailyEntry, RehabVideo, ContractResponse } from './types';
+import { AppUser, ContractItem, DailyEntry, RehabVideo, ContractResponse, TernaryResponse } from './types';
 import { mockContractItems, mockEntries, mockVideos } from './mock-data';
 import {
   getContractItems,
@@ -18,7 +18,15 @@ interface DiaryDraft {
   didTherapy?: boolean;
   therapyMinutes?: number;
   feeling?: number;
+  noTherapyReason?: string;
+  practicedActions?: TernaryResponse;
+  noPracticedActionsReason?: string;
+  selectedActions?: string[];
+  handInOtherActivities?: TernaryResponse;
+  noHandReason?: string;
+  posture?: TernaryResponse;
   noticedCompensations?: boolean;
+  compensationTypes?: string[];
   compensationNotes?: string;
   contractResponses: ContractResponse[];
   notes?: string;
@@ -163,7 +171,15 @@ export const useAppStore = create<AppState>()(
           didTherapy: diaryDraft.didTherapy ?? false,
           therapyMinutes: diaryDraft.therapyMinutes,
           feeling: diaryDraft.feeling,
+          noTherapyReason: diaryDraft.noTherapyReason,
+          practicedActions: diaryDraft.practicedActions,
+          noPracticedActionsReason: diaryDraft.noPracticedActionsReason,
+          selectedActions: diaryDraft.selectedActions,
+          handInOtherActivities: diaryDraft.handInOtherActivities,
+          noHandReason: diaryDraft.noHandReason,
+          posture: diaryDraft.posture,
           noticedCompensations: diaryDraft.noticedCompensations,
+          compensationTypes: diaryDraft.compensationTypes,
           compensationNotes: diaryDraft.compensationNotes,
           contractResponses: diaryDraft.contractResponses,
           notes: diaryDraft.notes,

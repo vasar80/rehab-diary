@@ -162,7 +162,7 @@ export default function VideoPage() {
             <div className="flex-1">
               <p className="text-sm font-bold text-text">Carica i tuoi esercizi</p>
               <p className="text-xs text-text-secondary mt-0.5">
-                I video vengono salvati in modo sicuro su Google Drive
+                Salva e rivedi le tue sessioni di terapia
               </p>
             </div>
           </div>
@@ -258,7 +258,7 @@ export default function VideoPage() {
                   </div>
                 </div>
                 <p className="text-2xl font-bold text-text mt-5">Caricato!</p>
-                <p className="text-text-secondary text-sm mt-1">Il video è ora su Google Drive</p>
+                <p className="text-text-secondary text-sm mt-1">Il video è stato salvato</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -348,7 +348,7 @@ export default function VideoPage() {
                   ) : (
                     <>
                       <Upload size={18} strokeWidth={2.5} />
-                      Carica su Google Drive
+                      Carica video
                     </>
                   )}
                 </button>

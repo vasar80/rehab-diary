@@ -197,31 +197,4 @@ export const mockEntries: DailyEntry[] = [
   },
 ];
 
-export const mockVideos: RehabVideo[] = [
-  {
-    id: 'video-1',
-    patientId: 'patient-1',
-    title: 'Esercizi equilibrio - settimana 6',
-    date: daysAgo(1),
-    duration: '4:32',
-    notes: 'Miglioramento nella stabilità laterale',
-    uploadedAt: daysAgo(1) + 'T10:00:00',
-  },
-  {
-    id: 'video-2',
-    patientId: 'patient-1',
-    title: 'Deambulazione con ausilio',
-    date: daysAgo(3),
-    duration: '2:15',
-    uploadedAt: daysAgo(3) + 'T11:30:00',
-  },
-  {
-    id: 'video-3',
-    patientId: 'patient-1',
-    title: 'Esercizi mano destra',
-    date: daysAgo(5),
-    duration: '3:48',
-    notes: 'Presa migliorata rispetto alla settimana scorsa',
-    uploadedAt: daysAgo(5) + 'T09:00:00',
-  },
-];
+export const mockVideos: RehabVideo[] = [];

@@ -2,6 +2,7 @@ export interface Patient {
   id: string;
   name: string;
   email: string;
+  sex?: 'M' | 'F';
   avatarUrl?: string;
   startDate: string;
   therapistId: string;
@@ -24,6 +25,8 @@ export interface ContractItem {
   createdAt: string;
 }
 
+export type TernaryResponse = 'yes' | 'no' | 'partial';
+
 export interface DailyEntry {
   id: string;
   patientId: string;
@@ -32,7 +35,15 @@ export interface DailyEntry {
   didTherapy: boolean;
   therapyMinutes?: number;
   feeling?: number;
+  noTherapyReason?: string;
+  practicedActions?: TernaryResponse;
+  noPracticedActionsReason?: string;
+  selectedActions?: string[];
+  handInOtherActivities?: TernaryResponse;
+  noHandReason?: string;
+  posture?: TernaryResponse;
   noticedCompensations?: boolean;
+  compensationTypes?: string[];
   compensationNotes?: string;
   contractResponses: ContractResponse[];
   notes?: string;
@@ -64,5 +75,6 @@ export interface AppUser {
   role: UserRole;
   name: string;
   email: string;
+  sex?: 'M' | 'F';
   isDemo?: boolean;
 }

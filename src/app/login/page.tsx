@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [sex, setSex] = useState<'M' | 'F'>('M');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       if (isRegister) {
-        await register(email, password, name, mode);
+        await register(email, password, name, mode, mode === 'patient' ? sex : undefined);
       } else {
         await login(email, password);
       }
@@ -35,6 +36,7 @@ export default function LoginPage() {
         role: mode,
         name: fbUser?.displayName || name || email.split('@')[0],
         email,
+        sex: mode === 'patient' ? sex : undefined,
         isDemo: false,
       });
       router.push(mode === 'admin' ? '/admin' : '/');
@@ -62,6 +64,7 @@ export default function LoginPage() {
       role,
       name: role === 'patient' ? 'Mario Rossi' : 'Dr.ssa Laura Bianchi',
       email: role === 'patient' ? 'mario.rossi@email.it' : 'l.bianchi@rehabclinic.it',
+      sex: role === 'patient' ? 'M' : 'F',
       isDemo: true,
     });
     router.push(role === 'admin' ? '/admin' : '/');
@@ -130,6 +133,32 @@ export default function LoginPage() {
                     required
                     className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
                   />
+                )}
+                {isRegister && mode === 'patient' && (
+                  <div className="bg-white/70 border border-white/80 rounded-2xl p-1 flex">
+                    <button
+                      type="button"
+                      onClick={() => setSex('M')}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        sex === 'M'
+                          ? 'gradient-primary text-white shadow-md shadow-primary/30'
+                          : 'text-text-secondary'
+                      }`}
+                    >
+                      Uomo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSex('F')}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        sex === 'F'
+                          ? 'gradient-primary text-white shadow-md shadow-primary/30'
+                          : 'text-text-secondary'
+                      }`}
+                    >
+                      Donna
+                    </button>
+                  </div>
                 )}
                 <input
                   type="email"
