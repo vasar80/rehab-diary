@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Heart, ArrowRight, Shield, Loader2, UserPlus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
+import { auth as firebaseAuth } from '@/lib/firebase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,11 +29,13 @@ export default function LoginPage() {
       } else {
         await login(email, password);
       }
+      const fbUser = firebaseAuth.currentUser;
       setUser({
-        id: email,
+        id: fbUser?.uid || email,
         role: mode,
-        name: name || email.split('@')[0],
+        name: fbUser?.displayName || name || email.split('@')[0],
         email,
+        isDemo: false,
       });
       router.push(mode === 'admin' ? '/admin' : '/');
     } catch (err: unknown) {
@@ -59,6 +62,7 @@ export default function LoginPage() {
       role,
       name: role === 'patient' ? 'Mario Rossi' : 'Dr.ssa Laura Bianchi',
       email: role === 'patient' ? 'mario.rossi@email.it' : 'l.bianchi@rehabclinic.it',
+      isDemo: true,
     });
     router.push(role === 'admin' ? '/admin' : '/');
   }

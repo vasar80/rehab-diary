@@ -64,4 +64,5 @@ export interface AppUser {
   role: UserRole;
   name: string;
   email: string;
+  isDemo?: boolean;
 }

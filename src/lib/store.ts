@@ -4,6 +4,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AppUser, ContractItem, DailyEntry, RehabVideo, ContractResponse } from './types';
 import { mockContractItems, mockEntries, mockVideos } from './mock-data';
+import {
+  getContractItems,
+  getDailyEntries,
+  getVideos,
+  saveDailyEntry,
+  saveVideo as saveVideoToFirestore,
+} from './firestore';
 
 interface DiaryDraft {
   mood?: number;
@@ -23,9 +30,11 @@ interface AppState {
   videos: RehabVideo[];
   diaryDraft: DiaryDraft;
   selectedPatientId: string | null;
+  firestoreLoaded: boolean;
 
   setUser: (user: AppUser | null) => void;
   setSelectedPatientId: (id: string | null) => void;
+  loadFromFirestore: (patientId: string) => Promise<void>;
 
   todayCompleted: () => boolean;
   getStreak: () => number;
@@ -57,9 +66,39 @@ export const useAppStore = create<AppState>()(
       videos: mockVideos,
       diaryDraft: { ...emptyDraft },
       selectedPatientId: null,
+      firestoreLoaded: false,
 
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        if (!user) {
+          set({ user: null, firestoreLoaded: false });
+          return;
+        }
+        set({ user });
+        if (!user.isDemo && !get().firestoreLoaded) {
+          get().loadFromFirestore(user.id);
+        }
+      },
+
       setSelectedPatientId: (id) => set({ selectedPatientId: id }),
+
+      loadFromFirestore: async (patientId: string) => {
+        try {
+          const [items, dailyEntries, vids] = await Promise.all([
+            getContractItems(patientId),
+            getDailyEntries(patientId),
+            getVideos(patientId),
+          ]);
+          set({
+            contractItems: items.length > 0 ? items : [],
+            entries: dailyEntries,
+            videos: vids,
+            firestoreLoaded: true,
+          });
+        } catch (err) {
+          console.warn('Failed to load from Firestore:', err);
+          set({ contractItems: [], entries: [], videos: [], firestoreLoaded: true });
+        }
+      },
 
       todayCompleted: () => {
         const { entries } = get();
@@ -112,10 +151,11 @@ export const useAppStore = create<AppState>()(
       resetDiaryDraft: () => set({ diaryDraft: { ...emptyDraft } }),
 
       submitDiary: () => {
-        const { diaryDraft, entries } = get();
+        const { diaryDraft, entries, user } = get();
+        const patientId = user?.id || 'patient-1';
         const newEntry: DailyEntry = {
           id: `entry-${Date.now()}`,
-          patientId: 'patient-1',
+          patientId,
           date: todayStr(),
           mood: diaryDraft.mood,
           didTherapy: diaryDraft.didTherapy ?? false,
@@ -131,10 +171,26 @@ export const useAppStore = create<AppState>()(
           entries: [newEntry, ...entries.filter((e) => e.date !== todayStr())],
           diaryDraft: { ...emptyDraft },
         });
+        if (user && !user.isDemo) {
+          saveDailyEntry(newEntry).then((firestoreId) => {
+            set((state) => ({
+              entries: state.entries.map((e) =>
+                e.id === newEntry.id ? { ...e, id: firestoreId } : e
+              ),
+            }));
+          }).catch((err) => console.warn('Failed to save entry to Firestore:', err));
+        }
       },
 
-      addVideo: (video) =>
-        set((state) => ({ videos: [video, ...state.videos] })),
+      addVideo: (video) => {
+        set((state) => ({ videos: [video, ...state.videos] }));
+        const user = get().user;
+        if (user && !user.isDemo) {
+          saveVideoToFirestore(video).catch((err) =>
+            console.warn('Failed to save video to Firestore:', err)
+          );
+        }
+      },
 
       addContractItem: (item) =>
         set((state) => ({ contractItems: [...state.contractItems, item] })),
