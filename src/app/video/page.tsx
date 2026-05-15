@@ -71,6 +71,7 @@ export default function VideoPage() {
     setProgress(0);
 
     const patientId = user?.id || 'patient-1';
+    const patientName = user?.name;
 
     try {
       const initRes = await fetch('/api/upload-init', {
@@ -81,6 +82,7 @@ export default function VideoPage() {
           mimeType: selectedFile.type || 'video/mp4',
           fileSize: selectedFile.size,
           patientId,
+          patientName,
           title,
         }),
       });
@@ -90,16 +92,30 @@ export default function VideoPage() {
         throw new Error(err.error || `Init failed (${initRes.status})`);
       }
 
-      const { uploadUrl } = await initRes.json();
+      const { uploadUrl, fileName } = await initRes.json();
 
-      const driveResp = await uploadWithProgress(uploadUrl, selectedFile, (p) => setProgress(p));
+      let driveResp = await uploadWithProgress(uploadUrl, selectedFile, (p) => setProgress(p));
+
+      if (!driveResp.id || !driveResp.webViewLink) {
+        try {
+          const confirmRes = await fetch('/api/upload-confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName, patientId, patientName }),
+          });
+          if (confirmRes.ok) {
+            const c = await confirmRes.json();
+            driveResp = { id: c.id, webViewLink: c.webViewLink };
+          }
+        } catch {}
+      }
 
       const newVideo: RehabVideo = {
         id: `video-${Date.now()}`,
         patientId,
         title,
         date: new Date().toISOString().split('T')[0],
-        googleDriveUrl: driveResp.webViewLink || `https://drive.google.com/file/d/${driveResp.id}/view`,
+        googleDriveUrl: driveResp.webViewLink || (driveResp.id ? `https://drive.google.com/file/d/${driveResp.id}/view` : undefined),
         notes: notes || undefined,
         uploadedAt: new Date().toISOString(),
       };
@@ -351,30 +367,48 @@ function uploadWithProgress(
   url: string,
   file: File,
   onProgress: (percent: number) => void
-): Promise<{ id?: string; webViewLink?: string }> {
+): Promise<{ id?: string; webViewLink?: string; reachedFullUpload?: boolean }> {
   return new Promise((resolve, reject) => {
+    let lastProgress = 0;
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url, true);
     xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
 
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+      if (e.lengthComputable) {
+        const pct = (e.loaded / e.total) * 100;
+        lastProgress = pct;
+        onProgress(pct);
+      }
+    };
+
+    xhr.upload.onload = () => {
+      lastProgress = 100;
+      onProgress(100);
     };
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const data = JSON.parse(xhr.responseText);
-          resolve(data);
+          resolve({ ...data, reachedFullUpload: true });
         } catch {
-          resolve({});
+          resolve({ reachedFullUpload: true });
         }
+      } else if (xhr.status === 0 && lastProgress >= 99.9) {
+        resolve({ reachedFullUpload: true });
       } else {
         reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`));
       }
     };
 
-    xhr.onerror = () => reject(new Error('Errore di rete durante il caricamento'));
+    xhr.onerror = () => {
+      if (lastProgress >= 99.9) {
+        resolve({ reachedFullUpload: true });
+      } else {
+        reject(new Error('Errore di rete durante il caricamento'));
+      }
+    };
     xhr.send(file);
   });
 }

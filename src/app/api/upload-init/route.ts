@@ -13,11 +13,11 @@ function getAuth() {
 
 async function getOrCreatePatientFolder(
   drive: ReturnType<typeof google.drive>,
-  patientId: string
+  folderName: string
 ): Promise<string> {
   if (!PARENT_FOLDER_ID) throw new Error('GOOGLE_DRIVE_FOLDER_ID env var not set');
 
-  const safeName = patientId.replace(/'/g, "\\'");
+  const safeName = folderName.replace(/'/g, "\\'");
 
   const existing = await drive.files.list({
     q: `name='${safeName}' and '${PARENT_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -32,7 +32,7 @@ async function getOrCreatePatientFolder(
 
   const folder = await drive.files.create({
     requestBody: {
-      name: patientId,
+      name: folderName,
       mimeType: 'application/vnd.google-apps.folder',
       parents: [PARENT_FOLDER_ID],
     },
@@ -45,7 +45,7 @@ async function getOrCreatePatientFolder(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { filename, mimeType, fileSize, patientId, title } = body;
+    const { filename, mimeType, fileSize, patientId, patientName, title } = body;
 
     if (!filename || !mimeType || !fileSize || !patientId) {
       return NextResponse.json(
@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
 
     const auth = getAuth();
     const drive = google.drive({ version: 'v3', auth });
-    const patientFolderId = await getOrCreatePatientFolder(drive, patientId);
+
+    const folderName = (patientName && patientName.trim()) || patientId;
+    const patientFolderId = await getOrCreatePatientFolder(drive, folderName);
 
     const ext = filename.split('.').pop() || 'mp4';
     const finalName = title
@@ -68,6 +70,12 @@ export async function POST(request: NextRequest) {
     const accessToken = tokenResp.token;
     if (!accessToken) throw new Error('Failed to get access token');
 
+    const origin =
+      request.headers.get('origin') ||
+      (request.headers.get('referer')
+        ? new URL(request.headers.get('referer')!).origin
+        : '');
+
     const initResp = await fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
       {
@@ -77,6 +85,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json; charset=UTF-8',
           'X-Upload-Content-Type': mimeType,
           'X-Upload-Content-Length': String(fileSize),
+          ...(origin ? { Origin: origin } : {}),
         },
         body: JSON.stringify({
           name: finalName,
