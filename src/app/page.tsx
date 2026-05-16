@@ -2,9 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Sparkles, ArrowRight, Loader2, BookOpen, Video, FileText } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
+import {
+  Send,
+  Sparkles,
+  Loader2,
+  BookOpen,
+  Video,
+  CalendarDays,
+  Menu,
+  X,
+  Plus,
+  ChevronRight,
+} from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAppStore } from '@/lib/store';
 
@@ -12,64 +21,14 @@ interface ChatMsg {
   id: string;
   role: 'assistant' | 'user';
   text: string;
-  cta?: { label: string; href: string; icon?: 'diary' | 'video' | 'contract' };
 }
 
-function buildOpener(args: {
-  todayCompleted: boolean;
-  hasVideoToday: boolean;
-  streak: number;
-  name: string;
-  hour: number;
-}): ChatMsg[] {
-  const { todayCompleted, hasVideoToday, streak, name, hour } = args;
-  const greet = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
-  const msgs: ChatMsg[] = [];
+type ActionKey = 'diary' | 'video' | 'appointments';
 
-  msgs.push({
-    id: 'greet',
-    role: 'assistant',
-    text: `${greet} ${name}. Sono qui se hai voglia di parlare, raccontarmi come va o chiedermi qualcosa sulla terapia.`,
-  });
-
-  if (!todayCompleted) {
-    msgs.push({
-      id: 'diary-cta',
-      role: 'assistant',
-      text: `Oggi non hai ancora compilato il diario. Quando vuoi, ci vogliono 2 minuti.`,
-      cta: { label: 'Apri il diario di oggi', href: '/diario', icon: 'diary' },
-    });
-  } else if (streak >= 3) {
-    msgs.push({
-      id: 'streak-praise',
-      role: 'assistant',
-      text: `Diario di oggi fatto. ${streak} giorni di fila — vera costanza.`,
-    });
-  } else {
-    msgs.push({
-      id: 'diary-done',
-      role: 'assistant',
-      text: `Diario di oggi compilato. Ottimo.`,
-    });
-  }
-
-  if (!hasVideoToday) {
-    msgs.push({
-      id: 'video-cta',
-      role: 'assistant',
-      text: `Se hai un video della seduta, caricalo qui — il tuo terapista lo potrà rivedere.`,
-      cta: { label: 'Carica un video', href: '/video', icon: 'video' },
-    });
-  }
-
-  return msgs;
-}
-
-const SUGGESTED_PROMPTS = [
-  'Cosa devo fare oggi?',
-  'Come va il mio percorso?',
-  'Cosa sono i compensi?',
-  'Dammi un esercizio facile',
+const ACTIONS: { key: ActionKey; icon: React.ReactNode; label: string; gradient: string }[] = [
+  { key: 'diary', icon: <BookOpen size={18} />, label: 'Compila il diario di oggi', gradient: 'gradient-primary' },
+  { key: 'video', icon: <Video size={18} />, label: 'Carica video', gradient: 'gradient-warm' },
+  { key: 'appointments', icon: <CalendarDays size={18} />, label: 'Prossimi appuntamenti', gradient: 'gradient-cool' },
 ];
 
 export default function HomePage() {
@@ -79,19 +38,19 @@ export default function HomePage() {
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [thinking, setThinking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const name = user?.name?.split(' ')[0] || 'Mario';
   const today = new Date().toISOString().split('T')[0];
   const hasVideoToday = videos.some((v) => v.date === today);
-  const now = new Date();
 
   const buildContext = useCallback(() => {
     const sortedVideos = [...videos].sort((a, b) => b.date.localeCompare(a.date));
     let daysSinceLastVideo: number | undefined;
     if (sortedVideos.length > 0) {
       const last = new Date(sortedVideos[0].date);
-      daysSinceLastVideo = Math.floor((new Date().getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+      daysSinceLastVideo = Math.floor((Date.now() - last.getTime()) / 86400000);
     }
     const completed = entries.filter((e) => e.completedAt).slice(0, 5);
     const recentNotes = completed
@@ -114,21 +73,7 @@ export default function HomePage() {
     };
   }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, hasVideoToday]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && history.length === 0) {
-      setHistory(buildOpener({
-        todayCompleted: todayCompleted(),
-        hasVideoToday,
-        streak: getStreak(),
-        name,
-        hour: now.getHours(),
-      }));
-    }
-  }, [mounted, history.length, todayCompleted, hasVideoToday, getStreak, name, now]);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -172,6 +117,23 @@ export default function HomePage() {
     }
   }
 
+  function handleAction(key: ActionKey) {
+    setMenuOpen(false);
+    if (key === 'diary') {
+      router.push('/diario');
+    } else if (key === 'video') {
+      router.push('/video');
+    } else if (key === 'appointments') {
+      send('Quali sono i miei prossimi appuntamenti di terapia?');
+    }
+  }
+
+  function handleNewChat() {
+    setHistory([]);
+    setInput('');
+    setMenuOpen(false);
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     send(input);
@@ -185,92 +147,101 @@ export default function HomePage() {
     );
   }
 
-  const dateStr = format(now, 'EEEE d MMMM', { locale: it });
-
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="px-5 pt-12 pb-3 flex-shrink-0">
+      <header className="flex-shrink-0 pt-12 pb-3 px-4">
         <div className="mx-auto max-w-md flex items-center justify-between">
-          <div>
-            <p className="text-text-secondary text-xs font-medium capitalize">{dateStr}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="relative">
-                <div className="absolute inset-0 gradient-primary rounded-xl blur-sm opacity-50" />
-                <div className="relative w-8 h-8 gradient-primary rounded-xl flex items-center justify-center">
-                  <Sparkles size={16} className="text-white" />
-                </div>
-              </div>
-              <h1 className="text-text font-bold text-lg">Assistente</h1>
-              <span className="text-[11px] text-text-secondary flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-success rounded-full inline-block" />
-                online
-              </span>
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="glass w-11 h-11 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Menu"
+          >
+            <Menu size={20} className="text-text" />
+          </button>
+          <div className="glass-strong rounded-full px-4 py-2 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
+              <Sparkles size={12} className="text-white" />
             </div>
+            <span className="text-text font-bold text-sm">Assistente</span>
           </div>
+          <button
+            onClick={handleNewChat}
+            className="glass w-11 h-11 rounded-2xl flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="Nuova conversazione"
+            title="Nuova conversazione"
+          >
+            <Plus size={20} className="text-text" />
+          </button>
         </div>
       </header>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-5 py-3"
-        style={{ paddingBottom: '180px' }}
-      >
-        <div className="mx-auto max-w-md space-y-3">
-          {history.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-              <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
-                m.role === 'user'
-                  ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
-                  : 'glass text-text rounded-bl-md'
-              }`}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                {m.cta && (
-                  <button
-                    onClick={() => router.push(m.cta!.href)}
-                    className="mt-2.5 bg-white/25 hover:bg-white/35 rounded-2xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                  >
-                    {m.cta.icon === 'diary' && <BookOpen size={13} />}
-                    {m.cta.icon === 'video' && <Video size={13} />}
-                    {m.cta.icon === 'contract' && <FileText size={13} />}
-                    {m.cta.label}
-                    <ArrowRight size={12} />
-                  </button>
-                )}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '260px' }}>
+        <div className="mx-auto max-w-md px-5 py-3">
+          {history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center pt-20 pb-8 animate-fade-in">
+              <div className="relative">
+                <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-40 scale-110" />
+                <div className="relative w-16 h-16 gradient-primary rounded-3xl flex items-center justify-center shadow-2xl glow-primary">
+                  <Sparkles size={28} className="text-white" strokeWidth={2.5} />
+                </div>
               </div>
+              <h1 className="text-text text-2xl font-bold mt-5 tracking-tight">
+                Ciao {name}
+              </h1>
+              <p className="text-text-secondary text-sm mt-2 max-w-[260px]">
+                Sono il tuo assistente per il percorso di riabilitazione. Chiedimi qualsiasi cosa o scegli una delle azioni qui sotto.
+              </p>
             </div>
-          ))}
-          {thinking && (
-            <div className="flex justify-start animate-fade-in">
-              <div className="glass rounded-3xl rounded-bl-md px-4 py-3 flex items-center gap-2">
-                <Loader2 size={14} className="animate-spin text-primary" />
-                <span className="text-sm text-text-secondary">sto pensando…</span>
-              </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((m) => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                  <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
+                    m.role === 'user'
+                      ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
+                      : 'glass text-text rounded-bl-md'
+                  }`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                  </div>
+                </div>
+              ))}
+              {thinking && (
+                <div className="flex justify-start animate-fade-in">
+                  <div className="glass rounded-3xl rounded-bl-md px-4 py-3 flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-primary" />
+                    <span className="text-sm text-text-secondary">sto pensando…</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
       <div className="fixed inset-x-0 z-30 pointer-events-none" style={{ bottom: '88px' }}>
-        <div className="mx-auto max-w-md px-4 pointer-events-auto">
-          {history.length <= 4 && !thinking && (
-            <div className="flex flex-wrap gap-2 mb-2 justify-end">
-              {SUGGESTED_PROMPTS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => send(p)}
-                  className="glass rounded-full px-3 py-1.5 text-xs font-semibold text-text active:scale-95 transition-transform"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
-          <form onSubmit={handleSend} className="flex items-center gap-2">
+        <div className="mx-auto max-w-md px-4 pointer-events-auto space-y-2">
+          <div className="space-y-2">
+            {ACTIONS.map((a) => (
+              <button
+                key={a.key}
+                onClick={() => handleAction(a.key)}
+                disabled={thinking}
+                className="w-full glass-strong rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left disabled:opacity-60"
+              >
+                <div className={`w-9 h-9 rounded-xl ${a.gradient} flex items-center justify-center shrink-0 text-white`}>
+                  {a.icon}
+                </div>
+                <span className="text-text font-semibold text-sm flex-1">{a.label}</span>
+                <ChevronRight size={16} className="text-text-muted shrink-0" />
+              </button>
+            ))}
+          </div>
+          <form onSubmit={handleSend} className="flex items-center gap-2 pt-1">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Scrivi un messaggio…"
+              placeholder="Chiedi all'assistente…"
               disabled={thinking}
               className="flex-1 glass-strong rounded-2xl px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary disabled:opacity-60"
             />
@@ -285,6 +256,75 @@ export default function HomePage() {
           </form>
         </div>
       </div>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-[60] animate-fade-in">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-md"
+            onClick={() => setMenuOpen(false)}
+          />
+          <aside className="absolute top-0 bottom-0 left-0 w-[88%] max-w-sm glass-strong p-5 pt-12 flex flex-col" style={{ animation: 'slide-in-left 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl gradient-primary flex items-center justify-center">
+                  <Sparkles size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-text">RehabDiary</p>
+                  <p className="text-[11px] text-text-secondary">{user?.email || ''}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider px-2 mb-1">Cosa vuoi fare?</p>
+              {ACTIONS.map((a) => (
+                <button
+                  key={a.key}
+                  onClick={() => handleAction(a.key)}
+                  className="w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+                >
+                  <div className={`w-9 h-9 rounded-xl ${a.gradient} flex items-center justify-center shrink-0 text-white`}>
+                    {a.icon}
+                  </div>
+                  <span className="text-text font-semibold text-sm flex-1">{a.label}</span>
+                  <ChevronRight size={16} className="text-text-muted" />
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 space-y-2">
+              <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider px-2 mb-1">Conversazione</p>
+              <button
+                onClick={handleNewChat}
+                className="w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center shrink-0">
+                  <Plus size={18} className="text-text" />
+                </div>
+                <span className="text-text font-semibold text-sm flex-1">Nuova conversazione</span>
+              </button>
+            </div>
+
+            <div className="mt-auto pt-6 text-center">
+              <p className="text-[11px] text-text-muted">RehabDiary v1.0</p>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slide-in-left {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+      `}</style>
 
       <BottomNav />
     </div>
