@@ -1,257 +1,292 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  BookOpen,
-  Flame,
-  TrendingUp,
-  ChevronRight,
-  CheckCircle2,
-  Video,
-  FileText,
-  Sparkles,
-  ArrowUpRight,
-} from 'lucide-react';
+import { Send, Sparkles, ArrowRight, Loader2, BookOpen, Video, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import BottomNav from '@/components/BottomNav';
 import { useAppStore } from '@/lib/store';
 
-const moodEmojis = ['', '😫', '😔', '😐', '🙂', '😊'];
-const moodLabels = ['', 'Pessimo', 'Male', 'Così così', 'Bene', 'Benissimo'];
+interface ChatMsg {
+  id: string;
+  role: 'assistant' | 'user';
+  text: string;
+  cta?: { label: string; href: string; icon?: 'diary' | 'video' | 'contract' };
+}
+
+function buildOpener(args: {
+  todayCompleted: boolean;
+  hasVideoToday: boolean;
+  streak: number;
+  name: string;
+  hour: number;
+}): ChatMsg[] {
+  const { todayCompleted, hasVideoToday, streak, name, hour } = args;
+  const greet = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+  const msgs: ChatMsg[] = [];
+
+  msgs.push({
+    id: 'greet',
+    role: 'assistant',
+    text: `${greet} ${name}. Sono qui se hai voglia di parlare, raccontarmi come va o chiedermi qualcosa sulla terapia.`,
+  });
+
+  if (!todayCompleted) {
+    msgs.push({
+      id: 'diary-cta',
+      role: 'assistant',
+      text: `Oggi non hai ancora compilato il diario. Quando vuoi, ci vogliono 2 minuti.`,
+      cta: { label: 'Apri il diario di oggi', href: '/diario', icon: 'diary' },
+    });
+  } else if (streak >= 3) {
+    msgs.push({
+      id: 'streak-praise',
+      role: 'assistant',
+      text: `Diario di oggi fatto. ${streak} giorni di fila — vera costanza.`,
+    });
+  } else {
+    msgs.push({
+      id: 'diary-done',
+      role: 'assistant',
+      text: `Diario di oggi compilato. Ottimo.`,
+    });
+  }
+
+  if (!hasVideoToday) {
+    msgs.push({
+      id: 'video-cta',
+      role: 'assistant',
+      text: `Se hai un video della seduta, caricalo qui — il tuo terapista lo potrà rivedere.`,
+      cta: { label: 'Carica un video', href: '/video', icon: 'video' },
+    });
+  }
+
+  return msgs;
+}
+
+const SUGGESTED_PROMPTS = [
+  'Cosa devo fare oggi?',
+  'Come va il mio percorso?',
+  'Cosa sono i compensi?',
+  'Dammi un esercizio facile',
+];
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, todayCompleted, getStreak, getComplianceRate, entries } = useAppStore();
+  const { user, todayCompleted, getStreak, getComplianceRate, entries, videos } = useAppStore();
   const [mounted, setMounted] = useState(false);
+  const [input, setInput] = useState('');
+  const [history, setHistory] = useState<ChatMsg[]>([]);
+  const [thinking, setThinking] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const name = user?.name?.split(' ')[0] || 'Mario';
+  const today = new Date().toISOString().split('T')[0];
+  const hasVideoToday = videos.some((v) => v.date === today);
+  const now = new Date();
+
+  const buildContext = useCallback(() => {
+    const sortedVideos = [...videos].sort((a, b) => b.date.localeCompare(a.date));
+    let daysSinceLastVideo: number | undefined;
+    if (sortedVideos.length > 0) {
+      const last = new Date(sortedVideos[0].date);
+      daysSinceLastVideo = Math.floor((new Date().getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    const completed = entries.filter((e) => e.completedAt).slice(0, 5);
+    const recentNotes = completed
+      .map((e) => e.notes)
+      .filter((n): n is string => !!n && n.trim().length > 0)
+      .slice(0, 3);
+    const noticedCompensationsRecently = completed.some((e) => e.noticedCompensations);
+    const lastEntry = completed[0];
+    return {
+      name,
+      sex: user?.sex,
+      todayCompleted: todayCompleted(),
+      streak: getStreak(),
+      complianceRate: getComplianceRate(),
+      lastMood: lastEntry?.mood,
+      hasVideoToday,
+      daysSinceLastVideo,
+      recentNotes,
+      noticedCompensationsRecently,
+    };
+  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, hasVideoToday]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (mounted && history.length === 0) {
+      setHistory(buildOpener({
+        todayCompleted: todayCompleted(),
+        hasVideoToday,
+        streak: getStreak(),
+        name,
+        hour: now.getHours(),
+      }));
+    }
+  }, [mounted, history.length, todayCompleted, hasVideoToday, getStreak, name, now]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [history, thinking]);
+
+  async function send(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || thinking) return;
+    const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text: trimmed };
+    const nextHistory = [...history, userMsg];
+    setHistory(nextHistory);
+    setInput('');
+    setThinking(true);
+
+    try {
+      const firstUserIdx = nextHistory.findIndex((m) => m.role === 'user');
+      const apiMessages = nextHistory
+        .slice(firstUserIdx >= 0 ? firstUserIdx : 0)
+        .map((m) => ({ role: m.role, text: m.text }));
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages, context: buildContext() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Errore ${res.status}`);
+      }
+      const data = await res.json();
+      setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: data.text || '…' }]);
+    } catch (err: unknown) {
+      setHistory((h) => [...h, {
+        id: `e-${Date.now()}`, role: 'assistant',
+        text: `Mi dispiace, c'è stato un problema (${err instanceof Error ? err.message : 'errore'}). Riprova tra poco.`,
+      }]);
+    } finally {
+      setThinking(false);
+    }
+  }
+
+  function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    send(input);
+  }
+
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 size={28} className="animate-spin text-primary" />
       </div>
     );
   }
 
-  const name = user?.name?.split(' ')[0] || 'Mario';
-  const now = new Date();
-  const greeting = now.getHours() < 12 ? 'Buongiorno' : now.getHours() < 18 ? 'Buon pomeriggio' : 'Buonasera';
-  const dateStr = format(now, "EEEE d MMMM", { locale: it });
-  const completed = todayCompleted();
-  const streak = getStreak();
-  const compliance = getComplianceRate();
-  const lastEntry = entries.find((e) => e.completedAt);
-  const lastMood = lastEntry?.mood;
+  const dateStr = format(now, 'EEEE d MMMM', { locale: it });
 
   return (
-    <div className="min-h-screen pb-32 relative">
-      <header className="px-5 pt-14 pb-6 relative animate-fade-in">
-        <div className="mx-auto max-w-md">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-text-secondary text-sm font-medium capitalize">{dateStr}</p>
-            {lastMood && (
-              <div className="glass rounded-full px-3 py-1.5 flex items-center gap-1.5">
-                <span className="text-base">{moodEmojis[lastMood]}</span>
-                <span className="text-text-secondary text-xs font-medium">
-                  {moodLabels[lastMood]}
-                </span>
+    <div className="min-h-screen flex flex-col">
+      <header className="px-5 pt-12 pb-3 flex-shrink-0">
+        <div className="mx-auto max-w-md flex items-center justify-between">
+          <div>
+            <p className="text-text-secondary text-xs font-medium capitalize">{dateStr}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="relative">
+                <div className="absolute inset-0 gradient-primary rounded-xl blur-sm opacity-50" />
+                <div className="relative w-8 h-8 gradient-primary rounded-xl flex items-center justify-center">
+                  <Sparkles size={16} className="text-white" />
+                </div>
               </div>
-            )}
+              <h1 className="text-text font-bold text-lg">Assistente</h1>
+              <span className="text-[11px] text-text-secondary flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-success rounded-full inline-block" />
+                online
+              </span>
+            </div>
           </div>
-          <h1 className="text-text text-3xl font-bold tracking-tight">
-            {greeting},
-          </h1>
-          <h2 className="text-4xl font-bold tracking-tight gradient-text-primary leading-tight">
-            {name} 👋
-          </h2>
         </div>
       </header>
 
-      <main className="px-5 mx-auto max-w-md space-y-5">
-        {!completed ? (
-          <button
-            onClick={() => router.push('/diario')}
-            className="w-full relative overflow-hidden rounded-3xl text-left animate-fade-in active:scale-[0.98] transition-all group"
-          >
-            <div className="absolute inset-0 gradient-primary" />
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
-            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-            <div className="relative p-6 text-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 mb-3">
-                    <Sparkles size={12} />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider">2 minuti</span>
-                  </div>
-                  <p className="text-2xl font-bold leading-tight">Diario di oggi</p>
-                  <p className="text-white/80 text-sm mt-1">Compila il tuo report giornaliero</p>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center group-active:translate-x-1 transition-transform">
-                  <ArrowUpRight size={20} />
-                </div>
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-5 py-3"
+        style={{ paddingBottom: '180px' }}
+      >
+        <div className="mx-auto max-w-md space-y-3">
+          {history.map((m) => (
+            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+              <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
+                m.role === 'user'
+                  ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
+                  : 'glass text-text rounded-bl-md'
+              }`}>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                {m.cta && (
+                  <button
+                    onClick={() => router.push(m.cta!.href)}
+                    className="mt-2.5 bg-white/25 hover:bg-white/35 rounded-2xl px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  >
+                    {m.cta.icon === 'diary' && <BookOpen size={13} />}
+                    {m.cta.icon === 'video' && <Video size={13} />}
+                    {m.cta.icon === 'contract' && <FileText size={13} />}
+                    {m.cta.label}
+                    <ArrowRight size={12} />
+                  </button>
+                )}
               </div>
             </div>
-          </button>
-        ) : (
-          <div className="w-full glass-strong rounded-3xl p-5 animate-fade-in">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-success rounded-2xl blur-lg opacity-30" />
-                <div className="relative w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-success/30">
-                  <CheckCircle2 size={24} className="text-white" strokeWidth={2.5} />
-                </div>
-              </div>
-              <div>
-                <p className="font-bold text-text">Diario completato!</p>
-                <p className="text-sm text-text-secondary">Ottimo lavoro, continua così</p>
+          ))}
+          {thinking && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="glass rounded-3xl rounded-bl-md px-4 py-3 flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-primary" />
+                <span className="text-sm text-text-secondary">sto pensando…</span>
               </div>
             </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-3 animate-fade-in stagger-1">
-          <StatCard
-            icon={<Flame size={20} className="text-white" strokeWidth={2.5} />}
-            iconGradient="gradient-warm"
-            value={streak}
-            label="Giorni streak"
-          />
-          <StatCard
-            icon={<TrendingUp size={20} className="text-white" strokeWidth={2.5} />}
-            iconGradient="gradient-primary"
-            value={`${compliance}%`}
-            label="Aderenza"
-          />
-          <StatCard
-            icon={<BookOpen size={20} className="text-white" strokeWidth={2.5} />}
-            iconGradient="gradient-cool"
-            value={entries.filter(e => e.completedAt).length}
-            label="Report totali"
-          />
-        </div>
-
-        <div className="space-y-3 animate-fade-in stagger-2">
-          <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">Accesso rapido</h2>
-
-          <button
-            onClick={() => router.push('/contratto')}
-            className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 gradient-primary rounded-2xl blur-md opacity-40" />
-              <div className="relative w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center">
-                <FileText size={20} className="text-white" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-text">Il mio contratto</p>
-              <p className="text-sm text-text-secondary truncate">Visualizza i tuoi impegni</p>
-            </div>
-            <ChevronRight size={18} className="text-text-muted shrink-0" />
-          </button>
-
-          <button
-            onClick={() => router.push('/video')}
-            className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 gradient-warm rounded-2xl blur-md opacity-40" />
-              <div className="relative w-12 h-12 rounded-2xl gradient-warm flex items-center justify-center">
-                <Video size={20} className="text-white" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-text">I miei video</p>
-              <p className="text-sm text-text-secondary truncate">Carica e rivedi le sedute</p>
-            </div>
-            <ChevronRight size={18} className="text-text-muted shrink-0" />
-          </button>
-        </div>
-
-        {entries.length > 0 && (
-          <div className="space-y-3 animate-fade-in stagger-3">
-            <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">Ultimi report</h2>
-            {entries
-              .filter((e) => e.completedAt)
-              .slice(0, 3)
-              .map((entry, i) => (
-                <div
-                  key={entry.id}
-                  className={`glass rounded-3xl p-4 animate-fade-in stagger-${Math.min(i + 4, 6)}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-white/60 flex items-center justify-center text-2xl">
-                        {moodEmojis[entry.mood || 3]}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm text-text capitalize">
-                          {format(new Date(entry.date), 'EEEE d MMM', { locale: it })}
-                        </p>
-                        <p className="text-xs text-text-secondary mt-0.5">
-                          {entry.didTherapy
-                            ? `${entry.therapyMinutes} min di terapia`
-                            : 'Nessuna terapia'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      {entry.contractResponses.slice(0, 4).map((r, i) => (
-                        <div
-                          key={i}
-                          className={`w-2 h-2 rounded-full ${
-                            r.response === 'yes'
-                              ? 'bg-success'
-                              : r.response === 'partial'
-                              ? 'bg-warning'
-                              : 'bg-danger/40'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  {entry.notes && (
-                    <p className="text-xs text-text-secondary mt-2 line-clamp-1 italic pl-1 border-l-2 border-primary/30 ml-1 pl-3">
-                      {entry.notes}
-                    </p>
-                  )}
-                </div>
-              ))}
-          </div>
-        )}
-      </main>
-
-      <BottomNav />
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  iconGradient,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  iconGradient: string;
-  value: number | string;
-  label: string;
-}) {
-  return (
-    <div className="glass rounded-3xl p-4 text-center">
-      <div className="relative inline-block">
-        <div className={`absolute inset-0 ${iconGradient} rounded-2xl blur-md opacity-40`} />
-        <div className={`relative w-10 h-10 rounded-2xl ${iconGradient} flex items-center justify-center mx-auto`}>
-          {icon}
+          )}
         </div>
       </div>
-      <p className="text-2xl font-bold text-text mt-2 tracking-tight">{value}</p>
-      <p className="text-[10px] text-text-secondary mt-0.5 font-medium">{label}</p>
+
+      <div className="fixed inset-x-0 z-30 pointer-events-none" style={{ bottom: '88px' }}>
+        <div className="mx-auto max-w-md px-4 pointer-events-auto">
+          {history.length <= 4 && !thinking && (
+            <div className="flex flex-wrap gap-2 mb-2 justify-end">
+              {SUGGESTED_PROMPTS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => send(p)}
+                  className="glass rounded-full px-3 py-1.5 text-xs font-semibold text-text active:scale-95 transition-transform"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          )}
+          <form onSubmit={handleSend} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Scrivi un messaggio…"
+              disabled={thinking}
+              className="flex-1 glass-strong rounded-2xl px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || thinking}
+              className="w-12 h-12 rounded-2xl gradient-primary text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform shadow-lg shadow-primary/30 glow-primary"
+              aria-label="Invia"
+            >
+              <Send size={18} />
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <BottomNav />
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { ReactNode, useEffect } from 'react';
 import { AuthProvider } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
-import ChatAssistant from './ChatAssistant';
 import DesktopFrame from './DesktopFrame';
 
 function FirestoreSync() {
@@ -25,7 +24,6 @@ export default function Providers({ children }: { children: ReactNode }) {
     <AuthProvider>
       <FirestoreSync />
       <DesktopFrame>{children}</DesktopFrame>
-      <ChatAssistant />
     </AuthProvider>
   );
 }
