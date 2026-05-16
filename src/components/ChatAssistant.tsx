@@ -128,8 +128,9 @@ export default function ChatAssistant() {
     setThinking(true);
 
     try {
+      const firstUserIdx = nextHistory.findIndex((m) => m.role === 'user');
       const apiMessages = nextHistory
-        .filter((m) => !m.cta || m.role === 'user')
+        .slice(firstUserIdx >= 0 ? firstUserIdx : 0)
         .map((m) => ({ role: m.role, text: m.text }));
 
       const res = await fetch('/api/chat', {
@@ -167,13 +168,17 @@ export default function ChatAssistant() {
   return (
     <>
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Apri assistente"
-          className="fixed bottom-24 right-5 z-40 w-14 h-14 rounded-full gradient-primary text-white shadow-2xl shadow-primary/40 glow-primary animate-pulse-glow active:scale-95 transition-transform flex items-center justify-center"
-        >
-          <MessageCircle size={24} strokeWidth={2.5} />
-        </button>
+        <div className="fixed inset-x-0 bottom-0 z-40 pointer-events-none">
+          <div className="mx-auto max-w-md relative h-32">
+            <button
+              onClick={() => setOpen(true)}
+              aria-label="Apri assistente"
+              className="absolute bottom-24 right-5 w-14 h-14 rounded-full gradient-primary text-white shadow-2xl shadow-primary/40 glow-primary animate-pulse-glow active:scale-95 transition-transform flex items-center justify-center pointer-events-auto"
+            >
+              <MessageCircle size={24} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
       )}
 
       {open && (
