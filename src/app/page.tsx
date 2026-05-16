@@ -25,10 +25,10 @@ interface ChatMsg {
 
 type ActionKey = 'diary' | 'video' | 'appointments';
 
-const ACTIONS: { key: ActionKey; icon: React.ReactNode; label: string; gradient: string }[] = [
-  { key: 'diary', icon: <BookOpen size={18} />, label: 'Compila il diario di oggi', gradient: 'gradient-primary' },
-  { key: 'video', icon: <Video size={18} />, label: 'Carica video', gradient: 'gradient-warm' },
-  { key: 'appointments', icon: <CalendarDays size={18} />, label: 'Prossimi appuntamenti', gradient: 'gradient-cool' },
+const ACTIONS: { key: ActionKey; icon: React.ReactNode; label: string }[] = [
+  { key: 'diary', icon: <BookOpen size={20} strokeWidth={1.7} />, label: 'Compila il diario di oggi' },
+  { key: 'video', icon: <Video size={20} strokeWidth={1.7} />, label: 'Carica video' },
+  { key: 'appointments', icon: <CalendarDays size={20} strokeWidth={1.7} />, label: 'Prossimi appuntamenti' },
 ];
 
 export default function HomePage() {
@@ -178,20 +178,7 @@ export default function HomePage() {
       <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '260px' }}>
         <div className="mx-auto max-w-md px-5 py-3">
           {history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center pt-20 pb-8 animate-fade-in">
-              <div className="relative">
-                <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-40 scale-110" />
-                <div className="relative w-16 h-16 gradient-primary rounded-3xl flex items-center justify-center shadow-2xl glow-primary">
-                  <Sparkles size={28} className="text-white" strokeWidth={2.5} />
-                </div>
-              </div>
-              <h1 className="text-text text-2xl font-bold mt-5 tracking-tight">
-                Ciao {name}
-              </h1>
-              <p className="text-text-secondary text-sm mt-2 max-w-[260px]">
-                Sono il tuo assistente per il percorso di riabilitazione. Chiedimi qualsiasi cosa o scegli una delle azioni qui sotto.
-              </p>
-            </div>
+            <div />
           ) : (
             <div className="space-y-3">
               {history.map((m) => (
@@ -219,36 +206,33 @@ export default function HomePage() {
       </div>
 
       <div className="fixed inset-x-0 z-30 pointer-events-none" style={{ bottom: '88px' }}>
-        <div className="mx-auto max-w-md px-4 pointer-events-auto space-y-2">
-          <div className="space-y-2">
+        <div className="mx-auto max-w-md px-4 pointer-events-auto">
+          <div className="mb-2 space-y-0.5">
             {ACTIONS.map((a) => (
               <button
                 key={a.key}
                 onClick={() => handleAction(a.key)}
                 disabled={thinking}
-                className="w-full glass-strong rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left disabled:opacity-60"
+                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl active:bg-white/50 transition-colors text-left disabled:opacity-50"
               >
-                <div className={`w-9 h-9 rounded-xl ${a.gradient} flex items-center justify-center shrink-0 text-white`}>
-                  {a.icon}
-                </div>
-                <span className="text-text font-semibold text-sm flex-1">{a.label}</span>
-                <ChevronRight size={16} className="text-text-muted shrink-0" />
+                <span className="text-text-secondary shrink-0">{a.icon}</span>
+                <span className="text-text font-medium text-[15px]">{a.label}</span>
               </button>
             ))}
           </div>
-          <form onSubmit={handleSend} className="flex items-center gap-2 pt-1">
+          <form onSubmit={handleSend} className="flex items-center gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Chiedi all'assistente…"
               disabled={thinking}
-              className="flex-1 glass-strong rounded-2xl px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary disabled:opacity-60"
+              className="flex-1 glass-strong rounded-full px-5 py-3.5 text-[15px] text-text placeholder:text-text-muted focus:outline-none focus:border-primary disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={!input.trim() || thinking}
-              className="w-12 h-12 rounded-2xl gradient-primary text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform shadow-lg shadow-primary/30 glow-primary"
+              className="w-12 h-12 rounded-full gradient-primary text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform shadow-lg shadow-primary/30 glow-primary"
               aria-label="Invia"
             >
               <Send size={18} />
@@ -282,18 +266,16 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-0.5">
               <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider px-2 mb-1">Cosa vuoi fare?</p>
               {ACTIONS.map((a) => (
                 <button
                   key={a.key}
                   onClick={() => handleAction(a.key)}
-                  className="w-full glass rounded-2xl px-4 py-3 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+                  className="w-full flex items-center gap-3 px-2 py-3 rounded-xl active:bg-white/50 transition-colors text-left"
                 >
-                  <div className={`w-9 h-9 rounded-xl ${a.gradient} flex items-center justify-center shrink-0 text-white`}>
-                    {a.icon}
-                  </div>
-                  <span className="text-text font-semibold text-sm flex-1">{a.label}</span>
+                  <span className="text-text-secondary shrink-0">{a.icon}</span>
+                  <span className="text-text font-medium text-[15px] flex-1">{a.label}</span>
                   <ChevronRight size={16} className="text-text-muted" />
                 </button>
               ))}
