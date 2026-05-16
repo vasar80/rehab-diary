@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageCircle, X, Send, Sparkles, BookOpen, Video, ArrowRight } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 interface ChatMsg {
@@ -12,49 +12,42 @@ interface ChatMsg {
   cta?: { label: string; href: string };
 }
 
-function buildProactiveMessages(args: {
+function buildOpener(args: {
   isF: boolean;
   todayCompleted: boolean;
   hasVideoToday: boolean;
   streak: number;
   name: string;
 }): ChatMsg[] {
-  const { isF, todayCompleted, hasVideoToday, streak, name } = args;
-  const past = (m: string, f: string) => (isF ? f : m);
+  const { todayCompleted, hasVideoToday, streak, name } = args;
   const msgs: ChatMsg[] = [];
 
   msgs.push({
     id: 'greet',
     role: 'assistant',
-    text: `Ciao ${name}! Sono il tuo assistente. Posso ricordarti cosa fare ogni giorno per restare in pista.`,
+    text: `Ciao ${name}! Sono qui se hai voglia di parlare, raccontarmi come va o se vuoi che ti ricordi cosa fare oggi.`,
   });
 
   if (!todayCompleted) {
     msgs.push({
       id: 'diary-cta',
       role: 'assistant',
-      text: `Oggi non hai ancora compilato il diario. Ti va di farlo adesso? Ci vogliono 2 minuti.`,
+      text: `Oggi non hai ancora compilato il diario. Vuoi farlo adesso? Ci vogliono 2 minuti.`,
       cta: { label: 'Apri diario', href: '/diario' },
     });
   } else if (streak >= 3) {
     msgs.push({
       id: 'streak-praise',
       role: 'assistant',
-      text: `Diario di oggi fatto. ${streak} giorni di fila — sei ${past('davvero costante', 'davvero costante')}!`,
-    });
-  } else {
-    msgs.push({
-      id: 'diary-done',
-      role: 'assistant',
-      text: `Hai già compilato il diario di oggi. Bravo${past('', 'a')}!`,
+      text: `Diario di oggi fatto. ${streak} giorni di fila — costanza vera, complimenti.`,
     });
   }
 
-  if (!hasVideoToday) {
+  if (!hasVideoToday && todayCompleted) {
     msgs.push({
       id: 'video-cta',
       role: 'assistant',
-      text: `Hai un video di una sessione da caricare? Caricalo qui — il tuo terapista lo vedrà.`,
+      text: `Se hai un video della sessione di oggi, caricalo qui — il tuo terapista lo potrà rivedere.`,
       cta: { label: 'Carica video', href: '/video' },
     });
   }
@@ -64,10 +57,11 @@ function buildProactiveMessages(args: {
 
 export default function ChatAssistant() {
   const router = useRouter();
-  const { user, todayCompleted, getStreak, videos } = useAppStore();
+  const { user, todayCompleted, getStreak, getComplianceRate, entries, videos } = useAppStore();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ChatMsg[]>([]);
+  const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const isF = user?.sex === 'F';
@@ -75,9 +69,38 @@ export default function ChatAssistant() {
   const today = new Date().toISOString().split('T')[0];
   const hasVideoToday = videos.some((v) => v.date === today);
 
+  const buildContext = useCallback(() => {
+    const sortedVideos = [...videos].sort((a, b) => b.date.localeCompare(a.date));
+    let daysSinceLastVideo: number | undefined;
+    if (sortedVideos.length > 0) {
+      const last = new Date(sortedVideos[0].date);
+      const now = new Date();
+      daysSinceLastVideo = Math.floor((now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+    }
+    const completedEntries = entries.filter((e) => e.completedAt).slice(0, 5);
+    const recentNotes = completedEntries
+      .map((e) => e.notes)
+      .filter((n): n is string => !!n && n.trim().length > 0)
+      .slice(0, 3);
+    const noticedCompensationsRecently = completedEntries.some((e) => e.noticedCompensations);
+    const lastEntry = completedEntries[0];
+    return {
+      name,
+      sex: user?.sex,
+      todayCompleted: todayCompleted(),
+      streak: getStreak(),
+      complianceRate: getComplianceRate(),
+      lastMood: lastEntry?.mood,
+      hasVideoToday,
+      daysSinceLastVideo,
+      recentNotes,
+      noticedCompensationsRecently,
+    };
+  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, hasVideoToday]);
+
   useEffect(() => {
     if (open && history.length === 0) {
-      setHistory(buildProactiveMessages({
+      setHistory(buildOpener({
         isF,
         todayCompleted: todayCompleted(),
         hasVideoToday,
@@ -91,23 +114,52 @@ export default function ChatAssistant() {
     if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [open, history]);
+  }, [open, history, thinking]);
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || thinking) return;
+
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text };
-    setHistory((h) => [...h, userMsg]);
+    const nextHistory = [...history, userMsg];
+    setHistory(nextHistory);
     setInput('');
-    setTimeout(() => {
+    setThinking(true);
+
+    try {
+      const apiMessages = nextHistory
+        .filter((m) => !m.cta || m.role === 'user')
+        .map((m) => ({ role: m.role, text: m.text }));
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages, context: buildContext() }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Errore ${res.status}`);
+      }
+
+      const data = await res.json();
       const reply: ChatMsg = {
         id: `a-${Date.now()}`,
         role: 'assistant',
-        text: 'Sto ancora imparando a rispondere a domande libere. Per ora ti suggerisco di compilare il diario o caricare un video — sono le cose che ti aiutano di più nel percorso.',
+        text: data.text || '…',
       };
       setHistory((h) => [...h, reply]);
-    }, 500);
+    } catch (err: unknown) {
+      const reply: ChatMsg = {
+        id: `e-${Date.now()}`,
+        role: 'assistant',
+        text: `Mi dispiace, ho un problema momentaneo a rispondere (${err instanceof Error ? err.message : 'errore'}). Riprova tra poco.`,
+      };
+      setHistory((h) => [...h, reply]);
+    } finally {
+      setThinking(false);
+    }
   }
 
   if (!user || user.role !== 'patient') return null;
@@ -156,7 +208,7 @@ export default function ChatAssistant() {
                       ? 'gradient-primary text-white rounded-br-md'
                       : 'glass text-text rounded-bl-md'
                   }`}>
-                    <p className="text-sm leading-relaxed">{m.text}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
                     {m.cta && (
                       <button
                         onClick={() => { router.push(m.cta!.href); setOpen(false); }}
@@ -168,6 +220,14 @@ export default function ChatAssistant() {
                   </div>
                 </div>
               ))}
+              {thinking && (
+                <div className="flex justify-start">
+                  <div className="glass rounded-3xl rounded-bl-md px-4 py-2.5 flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-primary" />
+                    <span className="text-sm text-text-secondary">sto pensando…</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleSend} className="px-4 pb-6 pt-2 flex items-center gap-2">
@@ -176,11 +236,12 @@ export default function ChatAssistant() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Scrivi un messaggio…"
-                className="flex-1 bg-white/70 border border-white/80 rounded-2xl px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+                disabled={thinking}
+                className="flex-1 bg-white/70 border border-white/80 rounded-2xl px-4 py-3 text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!input.trim() || thinking}
                 className="w-12 h-12 rounded-2xl gradient-primary text-white flex items-center justify-center disabled:opacity-40 active:scale-95 transition-transform shadow-lg shadow-primary/30"
                 aria-label="Invia"
               >

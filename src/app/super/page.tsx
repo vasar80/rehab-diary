@@ -26,6 +26,7 @@ interface Patient {
   email: string;
   sex?: 'M' | 'F';
   therapistId?: string;
+  externalId?: string;
   startDate?: string;
 }
 
@@ -117,6 +118,24 @@ export default function SuperAdminPage() {
       setPatients((prev) => prev.map((p) => (p.id === patientId ? { ...p, therapistId } : p)));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore assegnazione');
+    }
+  }
+
+  async function handleSetExternalId(patientId: string, externalId: string) {
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/set-external-id', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientId, externalId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Errore ${res.status}`);
+      }
+      setPatients((prev) => prev.map((p) => (p.id === patientId ? { ...p, externalId } : p)));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Errore salvataggio ID esterno');
     }
   }
 
@@ -288,6 +307,19 @@ export default function SuperAdminPage() {
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider shrink-0">ID gestionale</span>
+                  <input
+                    type="text"
+                    defaultValue={p.externalId || ''}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (v !== (p.externalId || '')) handleSetExternalId(p.id, v);
+                    }}
+                    placeholder="es. user_patient.123"
+                    className="flex-1 bg-white/70 border border-white/80 rounded-xl px-3 py-1.5 text-xs font-mono text-text focus:outline-none focus:border-primary"
+                  />
                 </div>
               </div>
             ))}

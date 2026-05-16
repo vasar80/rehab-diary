@@ -6,6 +6,7 @@ export interface Patient {
   avatarUrl?: string;
   startDate: string;
   therapistId: string;
+  externalId?: string;
 }
 
 export interface Therapist {

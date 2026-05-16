@@ -35,6 +35,7 @@ export async function savePatient(patient: Patient): Promise<void> {
     sex: patient.sex || null,
     startDate: patient.startDate,
     therapistId: patient.therapistId,
+    externalId: patient.externalId || null,
     avatarUrl: patient.avatarUrl || null,
   });
 }
