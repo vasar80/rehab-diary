@@ -13,8 +13,6 @@ import {
   Lock,
   X,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
 import SideMenu, { HamburgerButton } from '@/components/SideMenu';
 import ChatInputBar from '@/components/ChatInputBar';
 import Wordmark from '@/components/Wordmark';
@@ -105,12 +103,6 @@ export default function ProfiloPage() {
           <span className="inline-block mt-3 glass rounded-full px-4 py-1 text-xs font-bold text-primary uppercase tracking-wider">
             {role === 'admin' ? 'Terapista' : role === 'super_admin' ? 'Super Admin' : 'Paziente'}
           </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 mt-8 animate-fade-in stagger-1">
-          <StatBox value={completedEntries} label="Report" />
-          <StatBox value={activeContracts} label="Impegni" />
-          <StatBox value={format(new Date('2025-04-01'), 'dd/MM', { locale: it })} label="Inizio" />
         </div>
 
         <Section title="Il mio percorso" stagger={2}>

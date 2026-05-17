@@ -2,6 +2,8 @@ import { DailyEntry, TernaryResponse } from './types';
 
 export interface DiaryAnswer {
   mood?: number;
+  moodReason?: string;
+  moodContinue?: boolean;
   didTherapy?: boolean;
   therapyMinutes?: number;
   feeling?: number;
@@ -80,6 +82,38 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
       parse: (v) => parseInt(v, 10),
       display: (v) => ['', '😫 Pessimo', '😔 Male', '😐 Così così', '🙂 Bene', '😊 Benissimo'][v as number] || '',
     };
+  }
+
+  // Empathic interlude when mood is low (1 or 2): acknowledge before
+  // moving on, ask for a reason, then ask if we can continue.
+  if (answer.mood !== undefined && answer.mood <= 2) {
+    if (answer.moodReason === undefined) {
+      return {
+        id: 'mood-reason',
+        question: 'Mi dispiace sentirlo. C\'è un motivo in particolare? Puoi raccontarmelo se ti va, oppure passare oltre.',
+        type: 'text',
+        placeholder: 'Anche solo una frase, o lascia vuoto per saltare',
+        field: 'moodReason',
+      };
+    }
+    if (answer.moodContinue === undefined) {
+      return {
+        id: 'mood-continue',
+        question: 'Capisco. Speriamo domani vada meglio. Ti va se continuiamo con le altre domande, oppure preferisci fermarti qui per oggi?',
+        type: 'single',
+        options: [
+          { label: 'Sì, continuiamo', value: 'yes' },
+          { label: 'Mi fermo qui', value: 'no' },
+        ],
+        field: 'moodContinue',
+        parse: (v) => v === 'yes',
+        display: (v) => (v ? 'Continuiamo' : 'Mi fermo qui'),
+      };
+    }
+    // If the patient asked to stop, end the diary immediately
+    if (answer.moodContinue === false) {
+      return null;
+    }
   }
 
   if (answer.didTherapy === undefined) {

@@ -75,7 +75,7 @@ function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const [mode, setMode] = useState<'free' | 'diary' | 'contract' | 'done'>('free');
+  const [mode, setMode] = useState<'free' | 'diary' | 'contract'>('free');
   const [diaryAnswer, setDiaryAnswer] = useState<DiaryAnswer>({});
   const [currentStep, setCurrentStep] = useState<DiaryStep | null>(null);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
@@ -218,11 +218,12 @@ function HomePage() {
 
   function startDiary() {
     if (todayCompleted()) {
-      setMode('done');
+      setMode('free');
+      setCurrentStep(null);
       setHistory([{
         id: `a-${Date.now()}`,
         role: 'assistant',
-        text: `Hai già compilato il diario di oggi. Bravo! Torna domani per il prossimo.`,
+        text: `Hai già compilato il diario di oggi. Se ti va possiamo chiacchierare, oppure ci sentiamo domani.`,
       }]);
       return;
     }
@@ -327,14 +328,15 @@ function HomePage() {
       }
     }
 
-    setMode('done');
+    setMode('free');
+    setCurrentCommitment(null);
   }
 
   async function finishDiary(answer: DiaryAnswer) {
     const closing: ChatMsg = {
       id: `a-${Date.now()}`,
       role: 'assistant',
-      text: 'Grazie! Diario salvato. Ci sentiamo domani.',
+      text: 'Grazie, ho salvato il diario. Se ti va possiamo continuare a parlare di qualsiasi cosa.',
     };
     setHistory((h) => [...h, closing]);
 
@@ -364,34 +366,38 @@ function HomePage() {
       try { await saveDailyEntry(entry); } catch {}
     }
 
-    setMode('done');
+    setMode('free');
+    setCurrentStep(null);
   }
+
+  const urlMode = searchParams.get('mode');
+  const urlPrompt = searchParams.get('prompt');
+  const urlNew = searchParams.get('new');
 
   useEffect(() => {
     if (!mounted) return;
-    const m = searchParams.get('mode');
-    const prompt = searchParams.get('prompt');
-    const isNew = searchParams.get('new') === '1';
-    if (isNew) {
+    if (urlNew === '1') {
       setHistory([]);
       setInput('');
       setMode('free');
       setCurrentStep(null);
       setDiaryAnswer({});
+      setCurrentCommitment(null);
+      setContractAnswer({ accepted: [], rejected: [] });
       router.replace('/');
       return;
     }
-    if (m === 'diary') {
+    if (urlMode === 'diary') {
       startDiary();
       router.replace('/');
       return;
     }
-    if (m === 'contract') {
+    if (urlMode === 'contract') {
       startContract();
       router.replace('/');
       return;
     }
-    if (prompt === 'appointments') {
+    if (urlPrompt === 'appointments') {
       sendFree('Quali sono i miei prossimi appuntamenti di terapia?');
       router.replace('/');
       return;
@@ -404,7 +410,7 @@ function HomePage() {
       }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+  }, [mounted, urlMode, urlPrompt, urlNew]);
 
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
