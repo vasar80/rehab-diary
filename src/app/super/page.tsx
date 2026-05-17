@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   LogOut,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { auth as firebaseAuth } from '@/lib/firebase';
@@ -229,9 +230,14 @@ export default function SuperAdminPage() {
             <h1 className="text-text text-3xl font-bold tracking-tight">Gestione utenti</h1>
             <p className="text-text-secondary text-sm mt-1">{user.email}</p>
           </div>
-          <button onClick={handleLogout} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform" title="Esci">
-            <LogOut size={18} className="text-text-secondary" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.push('/super/ai')} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform" title="Personalità AI">
+              <Sparkles size={18} className="text-accent" />
+            </button>
+            <button onClick={handleLogout} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform" title="Esci">
+              <LogOut size={18} className="text-text-secondary" />
+            </button>
+          </div>
         </div>
       </header>
 

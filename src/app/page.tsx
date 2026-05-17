@@ -6,6 +6,7 @@ import { Send, Loader2, Check } from 'lucide-react';
 import SideMenu, { HamburgerButton } from '@/components/SideMenu';
 import ProfileButton from '@/components/ProfileButton';
 import Wordmark from '@/components/Wordmark';
+import TypewriterTwoColor from '@/components/TypewriterTwoColor';
 import { useAppStore } from '@/lib/store';
 import {
   DiaryAnswer,
@@ -35,12 +36,25 @@ interface ChatMsg {
 
 function fontClassFor(text: string): string {
   const len = text.length;
-  if (len < 30) return 'text-5xl leading-tight';
-  if (len < 80) return 'text-4xl leading-tight';
-  if (len < 160) return 'text-3xl leading-snug';
-  if (len < 300) return 'text-2xl leading-snug';
-  if (len < 600) return 'text-xl leading-relaxed';
-  return 'text-lg leading-relaxed';
+  if (len < 30) return 'text-4xl sm:text-5xl leading-tight';
+  if (len < 80) return 'text-3xl sm:text-4xl leading-tight';
+  if (len < 160) return 'text-2xl sm:text-3xl leading-snug';
+  if (len < 300) return 'text-xl sm:text-2xl leading-snug';
+  if (len < 600) return 'text-lg sm:text-xl leading-relaxed';
+  return 'text-base sm:text-lg leading-relaxed';
+}
+
+const PINK = '#E85A7A';
+const VIOLET = '#322A6E';
+
+function TwoColorInline({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <>
+      <span style={{ color: PINK }}>{text.charAt(0)}</span>
+      <span style={{ color: VIOLET }}>{text.slice(1)}</span>
+    </>
+  );
 }
 
 function HomePage() {
@@ -94,7 +108,7 @@ function HomePage() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [history, thinking, currentStep]);
 
@@ -160,9 +174,7 @@ function HomePage() {
 
   async function advanceDiary(value: string | string[], displayLabel?: string) {
     if (!currentStep) return;
-    const userText = Array.isArray(value)
-      ? value.join(', ')
-      : displayLabel || value;
+    const userText = Array.isArray(value) ? value.join(', ') : displayLabel || value;
     const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text: userText };
     setHistory((h) => [...h, userMsg]);
 
@@ -298,22 +310,25 @@ function HomePage() {
     );
   }
 
-  const latestAssistantIdx = (() => {
+  const latestBotIdx = (() => {
     for (let i = history.length - 1; i >= 0; i--) {
       if (history[i].role === 'assistant') return i;
     }
     return -1;
   })();
-  const latestAssistant = latestAssistantIdx >= 0 ? history[latestAssistantIdx] : null;
-  const olderMessages = latestAssistantIdx >= 0 ? history.slice(0, latestAssistantIdx) : history;
+  const latestBot = latestBotIdx >= 0 ? history[latestBotIdx] : null;
+  const olderReversed = history
+    .filter((_, i) => i !== latestBotIdx)
+    .slice()
+    .reverse();
 
   const showQuickReplies = mode === 'diary' && currentStep?.type === 'single' && currentStep.options;
   const showMultiSelect = mode === 'diary' && currentStep?.type === 'multi' && currentStep.options;
   const showTextInput = mode === 'free' || (mode === 'diary' && currentStep?.type === 'text');
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="flex-shrink-0 pt-12 pb-3 px-4">
+    <div className="h-[100dvh] flex flex-col overflow-hidden">
+      <header className="flex-shrink-0 pt-12 pb-3 px-4 z-20 relative">
         <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
           <HamburgerButton onClick={() => setMenuOpen(true)} />
           <Wordmark text="Kinora" className="text-3xl font-bold" />
@@ -321,24 +336,15 @@ function HomePage() {
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: showMultiSelect ? '280px' : showQuickReplies ? '240px' : '120px' }}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: showMultiSelect ? '280px' : showQuickReplies ? '200px' : '110px' }}>
         <div className="mx-auto max-w-md lg:max-w-2xl px-5 py-3 flex flex-col gap-3">
-          {olderMessages.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-              <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
-                m.role === 'user'
-                  ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
-                  : 'glass text-text rounded-bl-md'
-              }`}>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
-              </div>
-            </div>
-          ))}
-          {latestAssistant && (
-            <div key={latestAssistant.id} className="animate-fade-in py-6">
-              <p className={`font-display ${fontClassFor(latestAssistant.text)} text-text whitespace-pre-wrap`}>
-                {latestAssistant.text}
-              </p>
+          {latestBot && (
+            <div key={latestBot.id} className="py-4 animate-fade-in">
+              <TypewriterTwoColor
+                key={latestBot.id}
+                text={latestBot.text}
+                className={`font-display font-bold ${fontClassFor(latestBot.text)} whitespace-pre-wrap block`}
+              />
             </div>
           )}
           {thinking && (
@@ -349,6 +355,23 @@ function HomePage() {
               </div>
             </div>
           )}
+          {olderReversed.map((m) => (
+            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+              <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
+                m.role === 'user'
+                  ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
+                  : 'glass rounded-bl-md'
+              }`}>
+                {m.role === 'assistant' ? (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    <TwoColorInline text={m.text} />
+                  </p>
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -369,7 +392,7 @@ function HomePage() {
           )}
           {showMultiSelect && currentStep?.options && (
             <div className="glass-strong rounded-3xl p-3 animate-fade-in">
-              <div className="space-y-1 max-h-[40vh] overflow-y-auto">
+              <div className="space-y-1 max-h-[36vh] overflow-y-auto">
                 {currentStep.options.map((opt) => {
                   const selected = multiSelected.includes(opt.value);
                   return (

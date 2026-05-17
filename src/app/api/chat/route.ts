@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { buildSystemPrompt } from '@/lib/system-prompt';
+import { getAdminDb } from '@/lib/firebase-admin';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -37,7 +38,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
 
-    const systemPrompt = buildSystemPrompt(context);
+    let systemPrompt = buildSystemPrompt(context);
+    try {
+      const snap = await getAdminDb().collection('settings').doc('ai').get();
+      if (snap.exists) {
+        const data = snap.data() || {};
+        const customPersonality = (data.personality || '').trim();
+        const customKnowledge = (data.knowledge || '').trim();
+        if (customPersonality) {
+          systemPrompt += `\n\n# Personalità (override del proprietario)\n${customPersonality}`;
+        }
+        if (customKnowledge) {
+          systemPrompt += `\n\n# Conoscenza aggiuntiva\n${customKnowledge}`;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load AI config from Firestore:', err);
+    }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
