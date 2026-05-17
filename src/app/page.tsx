@@ -24,6 +24,7 @@ import {
 } from '@/lib/contract-script';
 import { generateUpcomingAppointments, MockAppointment } from '@/lib/appointments-mock';
 import CalendarWidget from '@/components/CalendarWidget';
+import DiaryVisual, { VisualType } from '@/components/DiaryVisual';
 
 export default function HomePageWrapper() {
   return (
@@ -527,8 +528,8 @@ function HomePage() {
                     className={`font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`}
                   />
                   {mode === 'diary' && currentStep?.visual && (
-                    <div className="mt-5 text-6xl sm:text-7xl animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
-                      {currentStep.visual}
+                    <div className="mt-5 animate-fade-in flex justify-start" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+                      <DiaryVisual type={currentStep.visual as VisualType} />
                     </div>
                   )}
                   {m.widget?.type === 'calendar' && (

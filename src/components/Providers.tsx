@@ -4,6 +4,7 @@ import { ReactNode, useEffect } from 'react';
 import { AuthProvider } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
 import DesktopFrame from './DesktopFrame';
+import NotificationsBanner from './NotificationsBanner';
 
 function FirestoreSync() {
   const user = useAppStore((s) => s.user);
@@ -24,6 +25,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     <AuthProvider>
       <FirestoreSync />
       <DesktopFrame>{children}</DesktopFrame>
+      <NotificationsBanner />
     </AuthProvider>
   );
 }

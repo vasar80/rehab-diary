@@ -16,11 +16,11 @@ export interface MockAppointment {
 }
 
 const TYPE_META: Record<AppointmentType, { title: string; who: string; duration: number }> = {
-  physio_monthly: { title: 'Visita mensile con il fisioterapista', who: 'Dr.ssa Laura Bianchi', duration: 50 },
-  physio_boost: { title: 'Boost con il fisioterapista', who: 'Dr.ssa Laura Bianchi', duration: 60 },
-  group_grasp: { title: 'Laboratorio di gruppo: presa', who: '3 partecipanti', duration: 75 },
-  group_walking: { title: 'Laboratorio di gruppo: cammino', who: '4 partecipanti', duration: 75 },
-  counselor: { title: 'Visita con il counselor', who: 'Dr. Marco Rinaldi', duration: 45 },
+  physio_monthly: { title: 'Visita fisio', who: 'Dr.ssa Laura Bianchi', duration: 50 },
+  physio_boost: { title: 'Boost fisio', who: 'Dr.ssa Laura Bianchi', duration: 60 },
+  group_grasp: { title: 'Lab presa', who: '3 partecipanti', duration: 75 },
+  group_walking: { title: 'Lab cammino', who: '4 partecipanti', duration: 75 },
+  counselor: { title: 'Counselor', who: 'Dr. Marco Rinaldi', duration: 45 },
 };
 
 function nextWeekday(from: Date, weekday: number): Date {
