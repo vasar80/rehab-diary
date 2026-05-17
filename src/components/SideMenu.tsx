@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Menu,
@@ -11,6 +10,7 @@ import {
   Edit3,
   Search,
 } from 'lucide-react';
+import Wordmark from './Wordmark';
 
 type ActionKey = 'diary' | 'video' | 'appointments';
 
@@ -30,11 +30,10 @@ interface SideMenuProps {
 
 export default function SideMenu({ open, onClose, onNewChat, history = [], onSelectChat }: SideMenuProps) {
   const router = useRouter();
-  const [imgError, setImgError] = useState(false);
 
   function handleAction(key: ActionKey) {
     onClose();
-    if (key === 'diary') router.push('/diario');
+    if (key === 'diary') router.push('/?mode=diary');
     else if (key === 'video') router.push('/video');
     else if (key === 'appointments') router.push('/?prompt=appointments');
   }
@@ -59,17 +58,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
           style={{ animation: 'slide-in-left 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}
         >
           <div className="px-5 pt-12 pb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              {!imgError && (
-                <img
-                  src="/resilients.PNG"
-                  alt=""
-                  className="w-9 h-9 rounded-xl object-contain"
-                  onError={() => setImgError(true)}
-                />
-              )}
-              <p className="font-bold text-text text-lg">Resilients</p>
-            </div>
+            <Wordmark text="Kinora" className="text-3xl font-bold" />
             <div className="flex items-center gap-2">
               <button
                 className="w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center active:scale-95 transition-transform"
