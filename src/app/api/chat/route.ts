@@ -29,6 +29,13 @@ interface ContractItemSummary {
   isActive: boolean;
 }
 
+interface AppointmentSummary {
+  date: string;
+  time: string;
+  title: string;
+  who: string;
+}
+
 interface ChatContext {
   name: string;
   sex?: 'M' | 'F';
@@ -42,6 +49,7 @@ interface ChatContext {
   noticedCompensationsRecently?: boolean;
   recentDiary?: DiaryEntrySummary[];
   contract?: ContractItemSummary[];
+  upcomingAppointments?: AppointmentSummary[];
   clinicalInfo?: string;
 }
 

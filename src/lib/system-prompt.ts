@@ -19,6 +19,13 @@ interface ContractItemSummary {
   isActive: boolean;
 }
 
+interface AppointmentSummary {
+  date: string;
+  time: string;
+  title: string;
+  who: string;
+}
+
 interface PromptContext {
   name: string;
   sex?: 'M' | 'F';
@@ -32,6 +39,7 @@ interface PromptContext {
   noticedCompensationsRecently?: boolean;
   recentDiary?: DiaryEntrySummary[];
   contract?: ContractItemSummary[];
+  upcomingAppointments?: AppointmentSummary[];
   clinicalInfo?: string;
 }
 
@@ -123,6 +131,15 @@ export function buildRuntimeContext(ctx: PromptContext): string {
       for (const c of active) {
         lines.push(`- [${c.type === 'general' ? 'generale' : 'specifico'}] ${c.text}`);
       }
+    }
+  }
+
+  if (ctx.upcomingAppointments && ctx.upcomingAppointments.length > 0) {
+    lines.push('');
+    lines.push('## Prossimi appuntamenti del paziente');
+    lines.push('Hai accesso a questi appuntamenti — se il paziente te li chiede, rispondi con date, orari e persone.');
+    for (const a of ctx.upcomingAppointments) {
+      lines.push(`- ${a.date} ore ${a.time} — ${a.title} (${a.who})`);
     }
   }
 

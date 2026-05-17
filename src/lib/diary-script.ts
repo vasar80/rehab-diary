@@ -29,6 +29,7 @@ export interface DiaryStep {
   field: keyof DiaryAnswer;
   parse?: (value: string) => unknown;
   display?: (value: unknown) => string;
+  visual?: string;
 }
 
 export const MAL_ACTIONS = [
@@ -128,6 +129,7 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
       field: 'didTherapy',
       parse: (v) => v === 'yes',
       display: (v) => (v ? 'Sì' : 'No'),
+      visual: '💪',
     };
   }
 
@@ -165,6 +167,7 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
         if (m === 90) return '1h 30';
         return `${Math.floor(m / 60)} ore`;
       },
+      visual: '⏱️',
     };
   }
 
@@ -227,6 +230,7 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
       options: TERNARY_OPTIONS,
       field: 'handInOtherActivities',
       display: (v) => (v === 'yes' ? 'Sì' : v === 'partial' ? 'In parte' : 'No'),
+      visual: '🤚',
     };
   }
 
@@ -248,6 +252,7 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
       options: TERNARY_OPTIONS,
       field: 'posture',
       display: (v) => (v === 'yes' ? 'Sì' : v === 'partial' ? 'In parte' : 'No'),
+      visual: '🪑',
     };
   }
 
@@ -267,6 +272,7 @@ function askCompensations(answer: DiaryAnswer): DiaryStep | null {
       field: 'noticedCompensations',
       parse: (v) => v === 'yes',
       display: (v) => (v ? 'Sì' : 'No'),
+      visual: '⚠️',
     };
   }
   if (answer.noticedCompensations === true && answer.compensationTypes === undefined) {

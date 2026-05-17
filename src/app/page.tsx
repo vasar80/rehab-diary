@@ -22,7 +22,8 @@ import {
   nextCommitment,
   buildContractItems,
 } from '@/lib/contract-script';
-import { generateUpcomingAppointments, formatAppointmentsAsChat } from '@/lib/appointments-mock';
+import { generateUpcomingAppointments, MockAppointment } from '@/lib/appointments-mock';
+import CalendarWidget from '@/components/CalendarWidget';
 
 export default function HomePageWrapper() {
   return (
@@ -40,6 +41,7 @@ interface ChatMsg {
   id: string;
   role: 'assistant' | 'user';
   text: string;
+  widget?: { type: 'calendar'; appointments: MockAppointment[] };
 }
 
 function fontClassFor(text: string): string {
@@ -123,6 +125,12 @@ function HomePage() {
       type: ci.type,
       isActive: ci.isActive,
     }));
+    const upcomingAppointments = generateUpcomingAppointments().slice(0, 6).map((a) => ({
+      date: a.date.toISOString().split('T')[0],
+      time: a.time,
+      title: a.title,
+      who: a.who,
+    }));
     return {
       name,
       sex: user?.sex,
@@ -136,6 +144,7 @@ function HomePage() {
       noticedCompensationsRecently,
       recentDiary,
       contract,
+      upcomingAppointments,
     };
   }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, contractItems]);
 
@@ -412,7 +421,8 @@ function HomePage() {
       const botMsg: ChatMsg = {
         id: `a-${Date.now()}`,
         role: 'assistant',
-        text: formatAppointmentsAsChat(appts),
+        text: `Ecco il tuo calendario. In viola gli appuntamenti col fisioterapista, in rosa i laboratori di gruppo, in azzurro il counselor.`,
+        widget: { type: 'calendar', appointments: appts },
       };
       setHistory((h) => [...h, userMsg, botMsg]);
       setMode('free');
@@ -516,24 +526,35 @@ function HomePage() {
                     text={m.text}
                     className={`font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`}
                   />
+                  {mode === 'diary' && currentStep?.visual && (
+                    <div className="mt-5 text-6xl sm:text-7xl animate-fade-in" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+                      {currentStep.visual}
+                    </div>
+                  )}
+                  {m.widget?.type === 'calendar' && (
+                    <CalendarWidget appointments={m.widget.appointments} />
+                  )}
                 </div>
               );
             }
             return (
-              <div key={m.id} id={`msg-${m.id}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
-                  m.role === 'user'
-                    ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
-                    : 'glass rounded-bl-md'
-                }`}>
-                  {m.role === 'assistant' ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      <TwoColorInline text={m.text} />
-                    </p>
-                  ) : (
+              <div key={m.id} id={`msg-${m.id}`} className={`${m.role === 'user' ? 'flex justify-end' : ''} animate-fade-in`}>
+                {m.role === 'user' ? (
+                  <div className="max-w-[88%] rounded-3xl rounded-br-md px-4 py-2.5 gradient-primary text-white shadow-md shadow-primary/30">
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="glass rounded-3xl rounded-bl-md px-4 py-2.5 max-w-[88%]">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        <TwoColorInline text={m.text} />
+                      </p>
+                    </div>
+                    {m.widget?.type === 'calendar' && (
+                      <CalendarWidget appointments={m.widget.appointments} />
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
