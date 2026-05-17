@@ -16,6 +16,7 @@ import {
   LogOut,
   AlertCircle,
   Sparkles,
+  Bell,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { auth as firebaseAuth } from '@/lib/firebase';
@@ -231,6 +232,9 @@ export default function SuperAdminPage() {
             <p className="text-text-secondary text-sm mt-1">{user.email}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => router.push('/super/push')} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform" title="Notifiche push">
+              <Bell size={18} className="text-accent" />
+            </button>
             <button onClick={() => router.push('/super/ai')} className="glass w-10 h-10 rounded-2xl flex items-center justify-center active:scale-95 transition-transform" title="Personalità AI">
               <Sparkles size={18} className="text-accent" />
             </button>

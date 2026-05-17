@@ -13,6 +13,7 @@ export interface MockAppointment {
   date: Date;
   time: string;
   duration: number;
+  done?: boolean;
 }
 
 const TYPE_META: Record<AppointmentType, { title: string; who: string; duration: number }> = {
@@ -23,48 +24,58 @@ const TYPE_META: Record<AppointmentType, { title: string; who: string; duration:
   counselor: { title: 'Counselor', who: 'Dr. Marco Rinaldi', duration: 45 },
 };
 
-function nextWeekday(from: Date, weekday: number): Date {
-  const d = new Date(from);
-  d.setHours(0, 0, 0, 0);
-  const diff = (weekday + 7 - d.getDay()) % 7 || 7;
-  d.setDate(d.getDate() + diff);
-  return d;
+function startOfMonth(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  out.setDate(1);
+  return out;
 }
 
-function addDays(d: Date, n: number): Date {
-  const out = new Date(d);
-  out.setDate(out.getDate() + n);
+function setDay(base: Date, day: number): Date {
+  const out = new Date(base);
+  out.setDate(day);
   return out;
 }
 
 export function generateUpcomingAppointments(): MockAppointment[] {
-  // Build a stable month of appointments anchored to a base date so the
-  // schedule doesn't reshuffle every render — only progresses week by week.
-  const now = new Date();
-  const monthStart = nextWeekday(now, 1); // next Monday
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const month = startOfMonth(today);
 
-  const schedule: { type: AppointmentType; dayOffset: number; time: string }[] = [
-    { type: 'physio_monthly', dayOffset: 1, time: '10:00' },
-    { type: 'physio_boost', dayOffset: 3, time: '11:30' },
-    { type: 'group_grasp', dayOffset: 4, time: '16:00' },
-    { type: 'physio_boost', dayOffset: 10, time: '14:00' },
-    { type: 'group_walking', dayOffset: 12, time: '09:30' },
-    { type: 'counselor', dayOffset: 14, time: '15:00' },
+  // Build a full-month schedule anchored to the actual current month so the
+  // user always sees a mix of past + today + future on the same calendar.
+  // 2× visita fisio, 2× boost, 1× lab presa, 1× lab cammino, 1× counselor.
+  const plan: { type: AppointmentType; day: number; time: string }[] = [
+    { type: 'physio_monthly', day: 3, time: '10:00' },
+    { type: 'physio_boost', day: 5, time: '14:00' },
+    { type: 'group_grasp', day: 9, time: '16:00' },
+    { type: 'physio_boost', day: 12, time: '11:30' },
+    { type: 'group_walking', day: 17, time: '09:30' },
+    { type: 'physio_monthly', day: 20, time: '10:00' },
+    { type: 'counselor', day: 24, time: '15:00' },
   ];
 
-  return schedule.map((s, i) => {
-    const date = addDays(monthStart, s.dayOffset);
-    const meta = TYPE_META[s.type];
+  // Shift the whole plan so that one appointment lands "today" or near, to
+  // give a nice live demo. Anchor the FIRST appointment 7 days before today.
+  const lastDayOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const anchor = Math.max(1, Math.min(lastDayOfMonth - 20, today.getDate() - 7));
+  const offset = anchor - plan[0].day;
+
+  return plan.map((p, i) => {
+    const day = Math.max(1, Math.min(lastDayOfMonth, p.day + offset));
+    const date = setDay(month, day);
+    const meta = TYPE_META[p.type];
     return {
       id: `appt-${i}`,
-      type: s.type,
+      type: p.type,
       title: meta.title,
       who: meta.who,
       date,
-      time: s.time,
+      time: p.time,
       duration: meta.duration,
+      done: date.getTime() < today.getTime(),
     };
-  }).filter((a) => a.date.getTime() >= now.getTime() - 86400000); // keep future ones
+  });
 }
 
 const DOW = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
@@ -72,7 +83,7 @@ const MONTHS = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', '
 
 export function formatAppointmentsAsChat(appointments: MockAppointment[]): string {
   if (appointments.length === 0) {
-    return 'Al momento non ho appuntamenti in calendario per te. Quando il centro fissa una nuova data te la mostro qui.';
+    return 'Al momento non ho appuntamenti in calendario per te.';
   }
   const lines = appointments.map((a) => {
     const dow = DOW[a.date.getDay()];
@@ -80,5 +91,16 @@ export function formatAppointmentsAsChat(appointments: MockAppointment[]): strin
     const mm = MONTHS[a.date.getMonth()];
     return `${dow} ${dd} ${mm}, ore ${a.time} — ${a.title} (${a.who})`;
   });
-  return `Ecco i tuoi prossimi appuntamenti:\n\n${lines.join('\n')}\n\nIn tutto ${appointments.length} appuntamenti nelle prossime settimane.`;
+  return `Ecco i tuoi prossimi appuntamenti:\n\n${lines.join('\n')}`;
+}
+
+export function findAppointmentTomorrow(appointments: MockAppointment[]): MockAppointment | undefined {
+  const tomorrow = new Date();
+  tomorrow.setHours(0, 0, 0, 0);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return appointments.find((a) => {
+    const d = new Date(a.date);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() === tomorrow.getTime();
+  });
 }

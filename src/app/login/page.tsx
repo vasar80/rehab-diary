@@ -18,11 +18,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [sex, setSex] = useState<'M' | 'F'>('M');
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isRegister && !consent) {
+      setError('Per registrarti devi accettare l\'informativa privacy.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -184,6 +189,22 @@ export default function LoginPage() {
                 />
               </div>
 
+              {isRegister && (
+                <label className="flex items-start gap-2 px-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    className="mt-1 w-4 h-4 accent-primary shrink-0"
+                  />
+                  <span className="text-text text-xs leading-snug">
+                    Ho letto e accetto l&apos;
+                    <a href="/privacy" target="_blank" className="text-primary underline font-semibold">informativa privacy</a>
+                    {' '}e acconsento al trattamento dei dati relativi alla salute necessari al percorso riabilitativo, inclusa la condivisione delle mie conversazioni con l&apos;assistente AI (Google Gemini).
+                  </span>
+                </label>
+              )}
+
               {error && (
                 <div className="bg-danger/10 border border-danger/30 rounded-2xl px-4 py-2.5">
                   <p className="text-danger text-sm font-medium">{error}</p>
@@ -192,7 +213,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (isRegister && !consent)}
                 className="w-full gradient-primary text-white font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 glow-primary disabled:opacity-60"
               >
                 {loading ? (

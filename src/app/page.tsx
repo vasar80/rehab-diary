@@ -22,9 +22,10 @@ import {
   nextCommitment,
   buildContractItems,
 } from '@/lib/contract-script';
-import { generateUpcomingAppointments, MockAppointment } from '@/lib/appointments-mock';
+import { generateUpcomingAppointments, MockAppointment, findAppointmentTomorrow } from '@/lib/appointments-mock';
 import CalendarWidget from '@/components/CalendarWidget';
 import DiaryVisual, { VisualType } from '@/components/DiaryVisual';
+import HomeWelcome from '@/components/HomeWelcome';
 
 export default function HomePageWrapper() {
   return (
@@ -348,10 +349,15 @@ function HomePage() {
   }
 
   async function finishDiary(answer: DiaryAnswer) {
+    const apptTomorrow = findAppointmentTomorrow(generateUpcomingAppointments());
+    const baseText = 'Grazie, ho salvato il diario. Se ti va possiamo continuare a parlare di qualsiasi cosa.';
+    const closingText = apptTomorrow
+      ? `${baseText}\n\nQuasi dimenticavo: domani hai "${apptTomorrow.title}" alle ${apptTomorrow.time} con ${apptTomorrow.who}. Ti ci faccio trovare pronto.`
+      : baseText;
     const closing: ChatMsg = {
       id: `a-${Date.now()}`,
       role: 'assistant',
-      text: 'Grazie, ho salvato il diario. Se ti va possiamo continuare a parlare di qualsiasi cosa.',
+      text: closingText,
     };
     setHistory((h) => [...h, closing]);
 
@@ -517,6 +523,9 @@ function HomePage() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: showMultiSelect ? '280px' : showQuickReplies ? '200px' : '110px' }}>
         <div className="mx-auto max-w-md lg:max-w-2xl px-5 py-3 flex flex-col gap-3">
+          {history.length === 0 && mode === 'free' && (
+            <HomeWelcome name={name} todayCompleted={todayCompleted()} />
+          )}
           {history.map((m, idx) => {
             const isLatestBot = idx === latestBotIdx;
             if (isLatestBot) {
