@@ -14,7 +14,14 @@ import {
   nextStep,
   buildDailyEntryFromAnswer,
 } from '@/lib/diary-script';
-import { saveDailyEntry } from '@/lib/firestore';
+import { saveDailyEntry, saveContractItem } from '@/lib/firestore';
+import { TernaryResponse } from '@/lib/types';
+import {
+  ContractAnswer,
+  ContractCommitment,
+  nextCommitment,
+  buildContractItems,
+} from '@/lib/contract-script';
 
 export default function HomePageWrapper() {
   return (
@@ -60,7 +67,7 @@ function TwoColorInline({ text }: { text: string }) {
 function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, todayCompleted, getStreak, getComplianceRate, entries, videos } = useAppStore();
+  const { user, todayCompleted, getStreak, getComplianceRate, entries, videos, contractItems } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ChatMsg[]>([]);
@@ -68,10 +75,12 @@ function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const [mode, setMode] = useState<'free' | 'diary' | 'done'>('free');
+  const [mode, setMode] = useState<'free' | 'diary' | 'contract' | 'done'>('free');
   const [diaryAnswer, setDiaryAnswer] = useState<DiaryAnswer>({});
   const [currentStep, setCurrentStep] = useState<DiaryStep | null>(null);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
+  const [contractAnswer, setContractAnswer] = useState<ContractAnswer>({ accepted: [], rejected: [] });
+  const [currentCommitment, setCurrentCommitment] = useState<ContractCommitment | null>(null);
 
   const name = user?.name?.split(' ')[0] || 'Mario';
 
@@ -82,14 +91,37 @@ function HomePage() {
       const last = new Date(sortedVideos[0].date);
       daysSinceLastVideo = Math.floor((Date.now() - last.getTime()) / 86400000);
     }
-    const completed = entries.filter((e) => e.completedAt).slice(0, 5);
+    const completed = entries
+      .filter((e) => e.completedAt)
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date));
     const recentNotes = completed
       .map((e) => e.notes)
       .filter((n): n is string => !!n && n.trim().length > 0)
       .slice(0, 3);
-    const noticedCompensationsRecently = completed.some((e) => e.noticedCompensations);
+    const noticedCompensationsRecently = completed.slice(0, 5).some((e) => e.noticedCompensations);
     const lastEntry = completed[0];
     const today = new Date().toISOString().split('T')[0];
+    const ternaryStr = (v?: TernaryResponse) => v === 'yes' ? 'sì' : v === 'partial' ? 'in parte' : v === 'no' ? 'no' : undefined;
+    const recentDiary = completed.slice(0, 7).map((e) => ({
+      date: e.date,
+      mood: e.mood,
+      didTherapy: e.didTherapy,
+      therapyMinutes: e.therapyMinutes,
+      feeling: e.feeling,
+      practicedActions: ternaryStr(e.practicedActions),
+      selectedActions: e.selectedActions,
+      handInOtherActivities: ternaryStr(e.handInOtherActivities),
+      posture: ternaryStr(e.posture),
+      noticedCompensations: e.noticedCompensations,
+      compensationTypes: e.compensationTypes,
+      notes: e.notes,
+    }));
+    const contract = contractItems.map((ci) => ({
+      text: ci.text,
+      type: ci.type,
+      isActive: ci.isActive,
+    }));
     return {
       name,
       sex: user?.sex,
@@ -101,14 +133,37 @@ function HomePage() {
       daysSinceLastVideo,
       recentNotes,
       noticedCompensationsRecently,
+      recentDiary,
+      contract,
     };
-  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name]);
+  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, contractItems]);
 
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!scrollRef.current) return;
-    // Scroll so the latest assistant message sits at the top of the visible area
+    const container = scrollRef.current;
+
+    // Prefer scrolling so the latest USER message's bottom edge is near the top
+    // of the viewport — that way the user sees what they just said + the bot's
+    // reply below it. If the user message is very long, only its tail stays
+    // visible at the top. If there's no user message yet (chat just started)
+    // we fall back to scrolling the latest bot message to the top.
+    let lastUserIdx = -1;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].role === 'user') { lastUserIdx = i; break; }
+    }
+
+    if (lastUserIdx >= 0) {
+      const el = document.getElementById(`msg-${history[lastUserIdx].id}`);
+      if (el) {
+        const tailVisible = 56; // px of the user message's tail kept visible at top
+        const target = el.offsetTop + el.offsetHeight - tailVisible;
+        container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        return;
+      }
+    }
+
     const lastBotIdx = (() => {
       for (let i = history.length - 1; i >= 0; i--) {
         if (history[i].role === 'assistant') return i;
@@ -116,11 +171,9 @@ function HomePage() {
       return -1;
     })();
     if (lastBotIdx < 0) return;
-    const el = document.getElementById(`msg-${history[lastBotIdx].id}`);
-    if (el && scrollRef.current) {
-      const container = scrollRef.current;
-      const offset = el.offsetTop - 8;
-      container.scrollTo({ top: offset, behavior: 'smooth' });
+    const botEl = document.getElementById(`msg-${history[lastBotIdx].id}`);
+    if (botEl) {
+      container.scrollTo({ top: Math.max(0, botEl.offsetTop - 8), behavior: 'smooth' });
     }
   }, [history, currentStep]);
 
@@ -208,6 +261,75 @@ function HomePage() {
     }, 350);
   }
 
+  function startContract() {
+    const empty: ContractAnswer = { accepted: [], rejected: [] };
+    setContractAnswer(empty);
+    setMode('contract');
+    const first = nextCommitment(empty);
+    if (first) {
+      setCurrentCommitment(first);
+      setHistory([
+        {
+          id: `intro-${Date.now()}`,
+          role: 'assistant',
+          text: 'Mettiamo a punto il tuo contratto riabilitativo. Ti farò una serie di domande sugli impegni che vorrai prenderti. Rispondi sì o no a ogni domanda.',
+        },
+        { id: `a-${Date.now()}`, role: 'assistant', text: first.question },
+      ]);
+    }
+  }
+
+  async function advanceContract(accepted: boolean) {
+    if (!currentCommitment) return;
+    const userMsg: ChatMsg = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      text: accepted ? 'Sì' : 'No',
+    };
+    setHistory((h) => [...h, userMsg]);
+
+    const updated: ContractAnswer = {
+      accepted: accepted ? [...contractAnswer.accepted, currentCommitment.id] : contractAnswer.accepted,
+      rejected: !accepted ? [...contractAnswer.rejected, currentCommitment.id] : contractAnswer.rejected,
+    };
+    setContractAnswer(updated);
+
+    setTimeout(async () => {
+      const next = nextCommitment(updated);
+      if (next) {
+        setCurrentCommitment(next);
+        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question }]);
+      } else {
+        setCurrentCommitment(null);
+        await finishContract(updated);
+      }
+    }, 350);
+  }
+
+  async function finishContract(answer: ContractAnswer) {
+    const accCount = answer.accepted.length;
+    const closing: ChatMsg = {
+      id: `a-${Date.now()}`,
+      role: 'assistant',
+      text: accCount === 0
+        ? 'Hai scelto di non prenderti nessun impegno per ora. Possiamo rifarlo quando vuoi.'
+        : `Perfetto, hai preso ${accCount} ${accCount === 1 ? 'impegno' : 'impegni'}. Il tuo contratto è attivo da oggi. Ci sentiamo domani per il primo diario.`,
+    };
+    setHistory((h) => [...h, closing]);
+
+    const patientId = user?.id || 'patient-1';
+    const items = buildContractItems(patientId, answer);
+    const store = useAppStore.getState();
+    for (const item of items) {
+      store.addContractItem(item);
+      if (user && !user.isDemo) {
+        try { await saveContractItem(item); } catch {}
+      }
+    }
+
+    setMode('done');
+  }
+
   async function finishDiary(answer: DiaryAnswer) {
     const closing: ChatMsg = {
       id: `a-${Date.now()}`,
@@ -264,6 +386,11 @@ function HomePage() {
       router.replace('/');
       return;
     }
+    if (m === 'contract') {
+      startContract();
+      router.replace('/');
+      return;
+    }
     if (prompt === 'appointments') {
       sendFree('Quali sono i miei prossimi appuntamenti di terapia?');
       router.replace('/');
@@ -295,6 +422,8 @@ function HomePage() {
     setCurrentStep(null);
     setDiaryAnswer({});
     setMultiSelected([]);
+    setCurrentCommitment(null);
+    setContractAnswer({ accepted: [], rejected: [] });
   }
 
   function handleQuickReply(value: string, label: string) {
@@ -329,9 +458,16 @@ function HomePage() {
     return -1;
   })();
 
-  const showQuickReplies = mode === 'diary' && currentStep?.type === 'single' && currentStep.options;
+  const showQuickReplies = (mode === 'diary' && currentStep?.type === 'single' && currentStep.options) || (mode === 'contract' && currentCommitment);
   const showMultiSelect = mode === 'diary' && currentStep?.type === 'multi' && currentStep.options;
   const showTextInput = mode === 'free' || (mode === 'diary' && currentStep?.type === 'text');
+
+  const quickReplyOptions: { label: string; value: string }[] | undefined =
+    mode === 'diary' ? currentStep?.options :
+    mode === 'contract' && currentCommitment ? [
+      { label: 'Sì', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ] : undefined;
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden">
@@ -389,12 +525,18 @@ function HomePage() {
 
       <div className="fixed inset-x-0 z-30 pointer-events-none bottom-5 sm:bottom-6">
         <div className="mx-auto max-w-md lg:max-w-2xl px-4 pointer-events-auto space-y-2">
-          {showQuickReplies && currentStep?.options && (
+          {showQuickReplies && quickReplyOptions && (
             <div className="flex flex-wrap gap-2 justify-end animate-fade-in">
-              {currentStep.options.map((opt) => (
+              {quickReplyOptions.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => handleQuickReply(opt.value, opt.label)}
+                  onClick={() => {
+                    if (mode === 'contract') {
+                      advanceContract(opt.value === 'yes');
+                    } else {
+                      handleQuickReply(opt.value, opt.label);
+                    }
+                  }}
                   className="glass-strong rounded-full px-4 py-2.5 text-[14px] font-semibold text-text active:scale-95 transition-transform"
                 >
                   {opt.label}

@@ -8,6 +8,27 @@ interface ChatMessage {
   text: string;
 }
 
+interface DiaryEntrySummary {
+  date: string;
+  mood?: number;
+  didTherapy?: boolean;
+  therapyMinutes?: number;
+  feeling?: number;
+  practicedActions?: string;
+  selectedActions?: string[];
+  handInOtherActivities?: string;
+  posture?: string;
+  noticedCompensations?: boolean;
+  compensationTypes?: string[];
+  notes?: string;
+}
+
+interface ContractItemSummary {
+  text: string;
+  type: 'general' | 'specific';
+  isActive: boolean;
+}
+
 interface ChatContext {
   name: string;
   sex?: 'M' | 'F';
@@ -19,6 +40,9 @@ interface ChatContext {
   daysSinceLastVideo?: number;
   recentNotes?: string[];
   noticedCompensationsRecently?: boolean;
+  recentDiary?: DiaryEntrySummary[];
+  contract?: ContractItemSummary[];
+  clinicalInfo?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -38,23 +62,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'messages required' }, { status: 400 });
     }
 
-    let systemPrompt = buildSystemPrompt(context);
+    let customBasePrompt: string | undefined;
+    let customClinicalInfo: string | undefined;
     try {
       const snap = await getAdminDb().collection('settings').doc('ai').get();
       if (snap.exists) {
         const data = snap.data() || {};
-        const customPersonality = (data.personality || '').trim();
-        const customKnowledge = (data.knowledge || '').trim();
-        if (customPersonality) {
-          systemPrompt += `\n\n# Personalità (override del proprietario)\n${customPersonality}`;
-        }
-        if (customKnowledge) {
-          systemPrompt += `\n\n# Conoscenza aggiuntiva\n${customKnowledge}`;
-        }
+        const stored = (data.basePrompt || data.personality || '').trim();
+        if (stored) customBasePrompt = stored;
+        const k = (data.knowledge || '').trim();
+        if (k) customClinicalInfo = k;
       }
     } catch (err) {
       console.warn('Could not load AI config from Firestore:', err);
     }
+
+    const enrichedContext = { ...context, clinicalInfo: customClinicalInfo || context.clinicalInfo };
+    const systemPrompt = buildSystemPrompt(enrichedContext, customBasePrompt);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({

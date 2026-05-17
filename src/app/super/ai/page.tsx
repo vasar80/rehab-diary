@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Sparkles, Save, AlertCircle, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, Save, AlertCircle, Check, RotateCcw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import Wordmark from '@/components/Wordmark';
+import { DEFAULT_BASE_PROMPT } from '@/lib/system-prompt';
 
 export default function AiConfigPage() {
   const router = useRouter();
@@ -15,8 +16,9 @@ export default function AiConfigPage() {
   const [saving, setSaving] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
   const [error, setError] = useState('');
-  const [personality, setPersonality] = useState('');
-  const [knowledge, setKnowledge] = useState('');
+  const [basePrompt, setBasePrompt] = useState('');
+  const [clinical, setClinical] = useState('');
+  const [hasCustom, setHasCustom] = useState(false);
 
   async function getToken(): Promise<string> {
     const fb = firebaseAuth.currentUser;
@@ -36,10 +38,18 @@ export default function AiConfigPage() {
         throw new Error(err.error || `Errore ${res.status}`);
       }
       const data = await res.json();
-      setPersonality(data.personality || '');
-      setKnowledge(data.knowledge || '');
+      const stored = (data.basePrompt || data.personality || '').trim();
+      if (stored) {
+        setBasePrompt(stored);
+        setHasCustom(true);
+      } else {
+        setBasePrompt(DEFAULT_BASE_PROMPT);
+        setHasCustom(false);
+      }
+      setClinical(data.knowledge || '');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore caricamento');
+      setBasePrompt(DEFAULT_BASE_PROMPT);
     } finally {
       setLoading(false);
     }
@@ -49,14 +59,8 @@ export default function AiConfigPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    if (user.role !== 'super_admin') {
-      router.push('/');
-      return;
-    }
+    if (!user) { router.push('/login'); return; }
+    if (user.role !== 'super_admin') { router.push('/'); return; }
     load();
   }, [mounted, user, router, load]);
 
@@ -68,12 +72,13 @@ export default function AiConfigPage() {
       const res = await fetch('/api/admin/ai-config', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personality, knowledge }),
+        body: JSON.stringify({ basePrompt, knowledge: clinical }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Errore ${res.status}`);
       }
+      setHasCustom(true);
       setSavedTick(true);
       setTimeout(() => setSavedTick(false), 1800);
     } catch (err: unknown) {
@@ -83,6 +88,11 @@ export default function AiConfigPage() {
     }
   }
 
+  function handleResetDefault() {
+    if (!confirm('Ripristino il system prompt di default. Le tue modifiche andranno perse. Continuare?')) return;
+    setBasePrompt(DEFAULT_BASE_PROMPT);
+  }
+
   if (!mounted || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -90,6 +100,8 @@ export default function AiConfigPage() {
       </div>
     );
   }
+
+  const dirty = basePrompt.trim() !== DEFAULT_BASE_PROMPT.trim();
 
   return (
     <div className="min-h-screen pb-32 relative">
@@ -106,10 +118,10 @@ export default function AiConfigPage() {
       <main className="px-5 mx-auto max-w-md lg:max-w-2xl space-y-5">
         <div className="flex items-center gap-2 px-1">
           <Sparkles size={16} className="text-accent" />
-          <h1 className="text-text font-bold text-xl">Personalità e conoscenza</h1>
+          <h1 className="text-text font-bold text-xl">System prompt</h1>
         </div>
         <p className="text-text-secondary text-sm px-1 -mt-3">
-          Influenza come Kinora parla e cosa sa. Queste istruzioni si aggiungono al system prompt clinico di base.
+          Questo è il system prompt esatto che invio a Kinora ad ogni messaggio. Modificalo qui e l'effetto è immediato sul prossimo turno. Il contesto runtime (data, diari recenti, contratto, ecc.) viene appeso automaticamente — qui editi solo identità, tono e regole.
         </p>
 
         {loading ? (
@@ -125,27 +137,37 @@ export default function AiConfigPage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider px-1">
-                Personalità
-              </label>
-              <textarea
-                value={personality}
-                onChange={(e) => setPersonality(e.target.value)}
-                placeholder="Es. Parla in modo caldo ma asciutto, mai paternalistico. Saluta con un'osservazione concreta sui dati del giorno, non con frasi generiche. Usa frasi corte."
-                className="w-full glass-strong border border-white/80 rounded-2xl p-4 text-sm text-text resize-none h-40 focus:outline-none focus:border-primary"
-              />
+            <div className="flex items-center justify-between gap-2 px-1">
+              <p className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">
+                {hasCustom ? 'Versione personalizzata' : 'Default'} · {basePrompt.length} caratteri
+              </p>
+              {dirty && (
+                <button
+                  onClick={handleResetDefault}
+                  className="text-[11px] font-bold text-text-secondary flex items-center gap-1 active:scale-95 transition-transform"
+                >
+                  <RotateCcw size={11} /> Ripristina default
+                </button>
+              )}
             </div>
+            <textarea
+              value={basePrompt}
+              onChange={(e) => setBasePrompt(e.target.value)}
+              className="w-full glass-strong border border-white/80 rounded-2xl p-4 text-[13px] text-text leading-relaxed resize-y h-[60vh] focus:outline-none focus:border-primary font-mono"
+            />
 
-            <div className="space-y-2">
+            <div className="space-y-2 pt-2">
               <label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider px-1">
-                Conoscenza aggiuntiva
+                Informazioni cliniche aggiuntive
               </label>
+              <p className="text-xs text-text-muted px-1">
+                Note cliniche che Kinora deve sapere su questo paziente o sul centro. Si aggiungono al prompt come una sezione &quot;Informazioni cliniche&quot;.
+              </p>
               <textarea
-                value={knowledge}
-                onChange={(e) => setKnowledge(e.target.value)}
-                placeholder="Es. Il centro si chiama Stroke Therapy Revolution. La direttrice è la Dr.ssa X. Le sedute durano 50 min. Le scale usate sono MAL-30, FMA, ARAT. Non somministriamo terapia farmacologica."
-                className="w-full glass-strong border border-white/80 rounded-2xl p-4 text-sm text-text resize-none h-48 focus:outline-none focus:border-primary"
+                value={clinical}
+                onChange={(e) => setClinical(e.target.value)}
+                placeholder="Es. Il centro è specializzato in CIMT post-ictus. Le scale standard sono MAL-30, FMA, ARAT."
+                className="w-full glass-strong border border-white/80 rounded-2xl p-4 text-sm text-text resize-none h-32 focus:outline-none focus:border-primary"
               />
             </div>
 

@@ -5,11 +5,12 @@ export async function GET(request: NextRequest) {
   try {
     await verifyCallerIsSuperAdmin(request.headers.get('authorization'));
     const snap = await getAdminDb().collection('settings').doc('ai').get();
-    const data = snap.exists ? snap.data() : null;
+    const data = snap.exists ? snap.data() || {} : {};
     return NextResponse.json({
-      personality: data?.personality || '',
-      knowledge: data?.knowledge || '',
-      updatedAt: data?.updatedAt || null,
+      basePrompt: data.basePrompt || data.personality || '',
+      personality: data.personality || '',
+      knowledge: data.knowledge || '',
+      updatedAt: data.updatedAt || null,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -21,15 +22,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await verifyCallerIsSuperAdmin(request.headers.get('authorization'));
-    const { personality, knowledge } = await request.json();
-    await getAdminDb().collection('settings').doc('ai').set(
-      {
-        personality: personality || '',
-        knowledge: knowledge || '',
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    const { basePrompt, personality, knowledge } = await request.json();
+    const payload: Record<string, string | null> = {
+      updatedAt: new Date().toISOString(),
+    };
+    if (basePrompt !== undefined) payload.basePrompt = (basePrompt || '').trim() || null;
+    if (personality !== undefined) payload.personality = (personality || '').trim() || null;
+    if (knowledge !== undefined) payload.knowledge = (knowledge || '').trim() || null;
+    await getAdminDb().collection('settings').doc('ai').set(payload, { merge: true });
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed';
