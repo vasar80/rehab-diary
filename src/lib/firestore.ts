@@ -190,6 +190,7 @@ export async function saveVideo(video: RehabVideo): Promise<string> {
     date: video.date,
     thumbnailUrl: video.thumbnailUrl ?? null,
     googleDriveUrl: video.googleDriveUrl ?? null,
+    driveFileId: video.driveFileId ?? null,
     duration: video.duration ?? null,
     notes: video.notes ?? null,
     uploadedAt: video.uploadedAt,

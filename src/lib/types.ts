@@ -66,6 +66,7 @@ export interface RehabVideo {
   date: string;
   thumbnailUrl?: string;
   googleDriveUrl?: string;
+  driveFileId?: string;
   duration?: string;
   notes?: string;
   uploadedAt: string;

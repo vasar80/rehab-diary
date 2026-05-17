@@ -45,13 +45,28 @@ export async function POST(request: NextRequest) {
       includeItemsFromAllDrives: true,
     });
     const file = fileQuery.data.files?.[0];
-    if (!file) {
+    if (!file || !file.id) {
       return NextResponse.json({ error: 'File not found on Drive' }, { status: 404 });
     }
+
+    // Make file viewable by anyone with the link so the patient can preview
+    // it inside the app via an iframe without having to authenticate with Drive.
+    try {
+      await drive.permissions.create({
+        fileId: file.id,
+        requestBody: { role: 'reader', type: 'anyone' },
+        supportsAllDrives: true,
+      });
+    } catch (permErr) {
+      console.warn('Could not make file public:', permErr instanceof Error ? permErr.message : permErr);
+    }
+
+    const embedUrl = `https://drive.google.com/file/d/${file.id}/preview`;
 
     return NextResponse.json({
       id: file.id,
       webViewLink: file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`,
+      embedUrl,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Confirm failed';

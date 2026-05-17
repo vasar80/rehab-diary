@@ -107,10 +107,22 @@ function HomePage() {
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
+    if (!scrollRef.current) return;
+    // Scroll so the latest assistant message sits at the top of the visible area
+    const lastBotIdx = (() => {
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].role === 'assistant') return i;
+      }
+      return -1;
+    })();
+    if (lastBotIdx < 0) return;
+    const el = document.getElementById(`msg-${history[lastBotIdx].id}`);
+    if (el && scrollRef.current) {
+      const container = scrollRef.current;
+      const offset = el.offsetTop - 8;
+      container.scrollTo({ top: offset, behavior: 'smooth' });
     }
-  }, [history, thinking, currentStep]);
+  }, [history, currentStep]);
 
   const sendFree = useCallback(
     async (text: string) => {
@@ -316,11 +328,6 @@ function HomePage() {
     }
     return -1;
   })();
-  const latestBot = latestBotIdx >= 0 ? history[latestBotIdx] : null;
-  const olderReversed = history
-    .filter((_, i) => i !== latestBotIdx)
-    .slice()
-    .reverse();
 
   const showQuickReplies = mode === 'diary' && currentStep?.type === 'single' && currentStep.options;
   const showMultiSelect = mode === 'diary' && currentStep?.type === 'multi' && currentStep.options;
@@ -338,15 +345,37 @@ function HomePage() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: showMultiSelect ? '280px' : showQuickReplies ? '200px' : '110px' }}>
         <div className="mx-auto max-w-md lg:max-w-2xl px-5 py-3 flex flex-col gap-3">
-          {latestBot && (
-            <div key={latestBot.id} className="py-4 animate-fade-in">
-              <TypewriterTwoColor
-                key={latestBot.id}
-                text={latestBot.text}
-                className={`font-display font-bold ${fontClassFor(latestBot.text)} whitespace-pre-wrap block`}
-              />
-            </div>
-          )}
+          {history.map((m, idx) => {
+            const isLatestBot = idx === latestBotIdx;
+            if (isLatestBot) {
+              return (
+                <div key={m.id} id={`msg-${m.id}`} className="py-4 animate-fade-in min-h-[40vh]">
+                  <TypewriterTwoColor
+                    key={m.id}
+                    text={m.text}
+                    className={`font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`}
+                  />
+                </div>
+              );
+            }
+            return (
+              <div key={m.id} id={`msg-${m.id}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
+                  m.role === 'user'
+                    ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
+                    : 'glass rounded-bl-md'
+                }`}>
+                  {m.role === 'assistant' ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      <TwoColorInline text={m.text} />
+                    </p>
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           {thinking && (
             <div className="flex justify-start animate-fade-in">
               <div className="glass rounded-3xl rounded-bl-md px-4 py-3 flex items-center gap-2">
@@ -355,23 +384,6 @@ function HomePage() {
               </div>
             </div>
           )}
-          {olderReversed.map((m) => (
-            <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-              <div className={`max-w-[88%] rounded-3xl px-4 py-2.5 ${
-                m.role === 'user'
-                  ? 'gradient-primary text-white rounded-br-md shadow-md shadow-primary/30'
-                  : 'glass rounded-bl-md'
-              }`}>
-                {m.role === 'assistant' ? (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    <TwoColorInline text={m.text} />
-                  </p>
-                ) : (
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                )}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

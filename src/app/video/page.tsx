@@ -31,6 +31,13 @@ export default function VideoPage() {
   const [notes, setNotes] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [previewVideo, setPreviewVideo] = useState<{ fileId: string; title: string } | null>(null);
+
+  function extractFileIdFromDriveUrl(url?: string): string | undefined {
+    if (!url) return undefined;
+    const m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : undefined;
+  }
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -88,28 +95,32 @@ export default function VideoPage() {
       }
       const { uploadUrl, fileName } = await initRes.json();
 
-      let driveResp = await uploadWithProgress(uploadUrl, selectedFile, (p) => setProgress(p));
+      await uploadWithProgress(uploadUrl, selectedFile, (p) => setProgress(p));
 
-      if (!driveResp.id || !driveResp.webViewLink) {
-        try {
-          const confirmRes = await fetch('/api/upload-confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileName, patientId, patientName }),
-          });
-          if (confirmRes.ok) {
-            const c = await confirmRes.json();
-            driveResp = { id: c.id, webViewLink: c.webViewLink };
-          }
-        } catch {}
-      }
+      // Always call upload-confirm — it sets anyone-with-link permission so
+      // the iframe preview works AND returns the file id we need for the embed URL.
+      let fileId: string | undefined;
+      let webViewLink: string | undefined;
+      try {
+        const confirmRes = await fetch('/api/upload-confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName, patientId, patientName }),
+        });
+        if (confirmRes.ok) {
+          const c = await confirmRes.json();
+          fileId = c.id;
+          webViewLink = c.webViewLink;
+        }
+      } catch {}
 
       const newVideo: RehabVideo = {
         id: `video-${Date.now()}`,
         patientId,
         title,
         date: new Date().toISOString().split('T')[0],
-        googleDriveUrl: driveResp.webViewLink || (driveResp.id ? `https://drive.google.com/file/d/${driveResp.id}/view` : undefined),
+        googleDriveUrl: webViewLink || (fileId ? `https://drive.google.com/file/d/${fileId}/view` : undefined),
+        driveFileId: fileId,
         notes: notes || undefined,
         uploadedAt: new Date().toISOString(),
       };
@@ -156,13 +167,16 @@ export default function VideoPage() {
               <Upload size={18} strokeWidth={2.5} />
               Carica video
             </button>
-            {videos.map((video, i) => (
-              <a
+            {videos.map((video, i) => {
+              const fileId = video.driveFileId || extractFileIdFromDriveUrl(video.googleDriveUrl);
+              return (
+              <button
                 key={video.id}
-                href={video.googleDriveUrl || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`block glass rounded-3xl overflow-hidden active:scale-[0.98] transition-transform animate-fade-in stagger-${Math.min(i + 1, 6)}`}
+                onClick={() => {
+                  if (fileId) setPreviewVideo({ fileId, title: video.title });
+                  else if (video.googleDriveUrl) window.open(video.googleDriveUrl, '_blank');
+                }}
+                className={`block w-full text-left glass rounded-3xl overflow-hidden active:scale-[0.98] transition-transform animate-fade-in stagger-${Math.min(i + 1, 6)}`}
               >
                 <div className="aspect-video relative gradient-cool flex items-center justify-center">
                   <div className="relative w-14 h-14 glass-strong rounded-2xl flex items-center justify-center shadow-2xl">
@@ -176,13 +190,37 @@ export default function VideoPage() {
                     {format(new Date(video.date), 'd MMM yyyy', { locale: it })}
                   </p>
                 </div>
-              </a>
-            ))}
+              </button>
+            );
+            })}
           </div>
         )}
       </main>
 
       <ChatInputBar />
+
+      {previewVideo && (
+        <div className="fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex flex-col animate-fade-in">
+          <div className="flex items-center justify-between px-5 pt-12 pb-3">
+            <h3 className="font-bold text-white text-base truncate pr-3">{previewVideo.title}</h3>
+            <button
+              onClick={() => setPreviewVideo(null)}
+              className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-transform"
+              aria-label="Chiudi"
+            >
+              <X size={20} className="text-white" />
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-center px-3 pb-10">
+            <iframe
+              src={`https://drive.google.com/file/d/${previewVideo.fileId}/preview`}
+              className="w-full h-full max-w-3xl rounded-2xl"
+              allow="autoplay"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
 
       {showUpload && (
         <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">

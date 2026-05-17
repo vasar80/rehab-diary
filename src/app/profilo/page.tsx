@@ -10,6 +10,8 @@ import {
   Calendar,
   LayoutDashboard,
   Loader2,
+  Lock,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -25,6 +27,9 @@ export default function ProfiloPage() {
   const { logout } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [ownerPwdOpen, setOwnerPwdOpen] = useState(false);
+  const [ownerPwd, setOwnerPwd] = useState('');
+  const [ownerPwdError, setOwnerPwdError] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -42,16 +47,27 @@ export default function ProfiloPage() {
   const completedEntries = entries.filter((e) => e.completedAt).length;
   const activeContracts = contractItems.filter((ci) => ci.isActive).length;
 
-  function handleSwitchToAdmin() {
-    setUser({
-      id: 'therapist-1',
-      role: 'admin',
-      name: 'Dr.ssa Laura Bianchi',
-      email: 'l.bianchi@rehabclinic.it',
-      sex: 'F',
-      isDemo: true,
-    });
-    router.push('/admin');
+  function handleOpenOwner() {
+    setOwnerPwd('');
+    setOwnerPwdError('');
+    setOwnerPwdOpen(true);
+  }
+
+  function handleOwnerSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (ownerPwd === '66666666') {
+      setUser({
+        id: 'owner',
+        role: 'super_admin',
+        name: 'Valerio Sarmati',
+        email: 'valeriosarmati@gmail.com',
+        isDemo: true,
+      });
+      setOwnerPwdOpen(false);
+      router.push('/super');
+    } else {
+      setOwnerPwdError('Password errata');
+    }
   }
 
   function handleSwitchToPatient() {
@@ -116,9 +132,9 @@ export default function ProfiloPage() {
           {role !== 'admin' ? (
             <ListItem
               icon={<LayoutDashboard size={20} strokeWidth={1.7} className="text-text-secondary" />}
-              title="Dashboard Terapista"
-              subtitle="Visualizza i dati dei pazienti"
-              onClick={handleSwitchToAdmin}
+              title="Dashboard Proprietario"
+              subtitle="Gestione utenti, AI e impostazioni"
+              onClick={handleOpenOwner}
             />
           ) : (
             <ListItem
@@ -148,6 +164,51 @@ export default function ProfiloPage() {
       <ChatInputBar />
 
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {ownerPwdOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">
+          <form onSubmit={handleOwnerSubmit} className="glass-strong w-full rounded-t-[2.5rem] p-5 pb-10 animate-slide-up max-w-md mx-auto">
+            <div className="w-12 h-1 bg-text-muted/30 rounded-full mx-auto mb-5" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl gradient-primary flex items-center justify-center">
+                  <Lock size={18} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-text">Area proprietario</h3>
+                  <p className="text-[11px] text-text-secondary">Richiesta password</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOwnerPwdOpen(false)}
+                className="w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <input
+              type="password"
+              inputMode="numeric"
+              autoFocus
+              value={ownerPwd}
+              onChange={(e) => { setOwnerPwd(e.target.value); setOwnerPwdError(''); }}
+              placeholder="Password"
+              className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+            />
+            {ownerPwdError && (
+              <p className="text-danger text-sm font-medium mt-2 px-1">{ownerPwdError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={!ownerPwd}
+              className="w-full mt-3 gradient-primary text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 glow-primary"
+            >
+              Entra
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
