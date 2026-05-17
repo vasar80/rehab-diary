@@ -25,7 +25,6 @@ import {
 import { generateUpcomingAppointments, MockAppointment, findAppointmentTomorrow } from '@/lib/appointments-mock';
 import CalendarWidget from '@/components/CalendarWidget';
 import DiaryVisual, { VisualType } from '@/components/DiaryVisual';
-import HomeWelcome from '@/components/HomeWelcome';
 
 export default function HomePageWrapper() {
   return (
@@ -43,7 +42,10 @@ interface ChatMsg {
   id: string;
   role: 'assistant' | 'user';
   text: string;
-  widget?: { type: 'calendar'; appointments: MockAppointment[] };
+  widget?:
+    | { type: 'calendar'; appointments: MockAppointment[] };
+  inlineAction?: { action: 'diary' | 'appointments' | 'video'; label: string };
+  kind?: 'intro';
 }
 
 function fontClassFor(text: string): string {
@@ -86,6 +88,8 @@ function HomePage() {
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [contractAnswer, setContractAnswer] = useState<ContractAnswer>({ accepted: [], rejected: [] });
   const [currentCommitment, setCurrentCommitment] = useState<ContractCommitment | null>(null);
+  const introShownRef = useRef(false);
+  const introTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const name = user?.name?.split(' ')[0] || 'Mario';
 
@@ -197,6 +201,8 @@ function HomePage() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || thinking) return;
+      introTimersRef.current.forEach((t) => clearTimeout(t));
+      introTimersRef.current = [];
       const userMsg: ChatMsg = { id: `u-${Date.now()}`, role: 'user', text: trimmed };
       const nextHistory = [...history, userMsg];
       setHistory(nextHistory);
@@ -231,6 +237,92 @@ function HomePage() {
     },
     [thinking, history, buildContext]
   );
+
+  function cancelHomeIntro() {
+    introTimersRef.current.forEach((t) => clearTimeout(t));
+    introTimersRef.current = [];
+  }
+
+  function startHomeIntro() {
+    cancelHomeIntro();
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+    const opening = todayCompleted()
+      ? `${greet} ${name}, il diario di oggi è già fatto. Cosa vogliamo fare adesso?`
+      : `${greet} ${name}, cosa vogliamo fare adesso?`;
+    const base = Date.now();
+    const steps: ChatMsg[] = [{
+      id: `welcome-${base}`,
+      role: 'assistant',
+      text: opening,
+      kind: 'intro',
+    }];
+    if (!todayCompleted()) {
+      steps.push({
+        id: `intro-${base}-diary`,
+        role: 'assistant',
+        text: 'Vogliamo compilare il diario di oggi?',
+        kind: 'intro',
+        inlineAction: { action: 'diary', label: 'Compila il diario' },
+      });
+    }
+    steps.push({
+      id: `intro-${base}-appts`,
+      role: 'assistant',
+      text: 'Oppure ti ricordo qual è il prossimo appuntamento?',
+      kind: 'intro',
+      inlineAction: { action: 'appointments', label: 'Vedi appuntamenti' },
+    });
+    steps.push({
+      id: `intro-${base}-video`,
+      role: 'assistant',
+      text: 'O carichiamo un video della tua sessione?',
+      kind: 'intro',
+      inlineAction: { action: 'video', label: 'Carica un video' },
+    });
+    steps.push({
+      id: `intro-${base}-end`,
+      role: 'assistant',
+      text: 'Altrimenti sono qui, chiedimi pure.',
+      kind: 'intro',
+    });
+
+    setHistory([steps[0]]);
+    for (let i = 1; i < steps.length; i++) {
+      const idx = i;
+      const t = setTimeout(() => {
+        setHistory((h) => {
+          // Only continue if user hasn't navigated away or cleared chat
+          if (h.length === 0) return h;
+          const last = h[h.length - 1];
+          if (last.role === 'user') return h; // user took over, stop
+          return [...h, steps[idx]];
+        });
+      }, idx * 2200);
+      introTimersRef.current.push(t);
+    }
+  }
+
+  function handleInlineAction(action: 'diary' | 'appointments' | 'video') {
+    cancelHomeIntro();
+    if (action === 'diary') {
+      startDiary();
+    } else if (action === 'appointments') {
+      const appts = generateUpcomingAppointments();
+      setHistory((h) => [
+        ...h,
+        { id: `u-${Date.now()}`, role: 'user', text: 'Quali sono i miei prossimi appuntamenti?' },
+        {
+          id: `a-${Date.now() + 1}`,
+          role: 'assistant',
+          text: 'Ecco il tuo calendario. In viola gli appuntamenti col fisioterapista, in rosa i laboratori di gruppo, in azzurro il counselor.',
+          widget: { type: 'calendar', appointments: appts },
+        },
+      ]);
+    } else if (action === 'video') {
+      router.push('/video');
+    }
+  }
 
   function startDiary() {
     if (todayCompleted()) {
@@ -448,6 +540,23 @@ function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, urlMode, urlPrompt, urlNew]);
 
+  // Play the home intro sequence once per page mount, never on subsequent
+  // history clears (e.g. "Nuova chat" from the side menu).
+  useEffect(() => {
+    if (!mounted) return;
+    if (introShownRef.current) return;
+    if (history.length !== 0) return;
+    if (mode !== 'free') return;
+    if (urlMode === 'diary' || urlMode === 'contract' || urlPrompt === 'appointments' || urlNew === '1') return;
+    introShownRef.current = true;
+    startHomeIntro();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, history.length, mode, urlMode, urlPrompt, urlNew]);
+
+  useEffect(() => {
+    return () => cancelHomeIntro();
+  }, []);
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (mode === 'diary' && currentStep?.type === 'text') {
@@ -458,6 +567,8 @@ function HomePage() {
   }
 
   function handleNewChat() {
+    cancelHomeIntro();
+    introShownRef.current = true;
     setHistory([]);
     setInput('');
     setMode('free');
@@ -523,19 +634,21 @@ function HomePage() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0" style={{ paddingBottom: showMultiSelect ? '280px' : showQuickReplies ? '200px' : '110px' }}>
         <div className="mx-auto max-w-md lg:max-w-2xl px-5 py-3 flex flex-col gap-3">
-          {history.length === 0 && mode === 'free' && (
-            <HomeWelcome name={name} todayCompleted={todayCompleted()} />
-          )}
           {history.map((m, idx) => {
             const isLatestBot = idx === latestBotIdx;
-            if (isLatestBot) {
+            const isIntro = m.kind === 'intro';
+            if (isLatestBot && !isIntro && m.role === 'assistant') {
+              const textClasses = `font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`;
               return (
                 <div key={m.id} id={`msg-${m.id}`} className="py-4 animate-fade-in min-h-[40vh]">
-                  <TypewriterTwoColor
-                    key={m.id}
-                    text={m.text}
-                    className={`font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`}
-                  />
+                  <div className="relative">
+                    <span aria-hidden className={`${textClasses} invisible`}>{m.text}</span>
+                    <TypewriterTwoColor
+                      key={m.id}
+                      text={m.text}
+                      className={`${textClasses} absolute inset-0`}
+                    />
+                  </div>
                   {mode === 'diary' && currentStep?.visual && (
                     <div className="mt-5 animate-fade-in flex justify-start" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
                       <DiaryVisual type={currentStep.visual as VisualType} />
@@ -557,9 +670,23 @@ function HomePage() {
                   <div>
                     <div className="glass rounded-3xl rounded-bl-md px-4 py-2.5 max-w-[88%]">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        <TwoColorInline text={m.text} />
+                        {isIntro ? (
+                          <TypewriterTwoColor text={m.text} speed={20} />
+                        ) : (
+                          <TwoColorInline text={m.text} />
+                        )}
                       </p>
                     </div>
+                    {m.inlineAction && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => handleInlineAction(m.inlineAction!.action)}
+                          className="glass-strong rounded-full px-4 py-2 text-[13px] font-semibold text-text active:scale-95 transition-transform"
+                        >
+                          {m.inlineAction.label}
+                        </button>
+                      </div>
+                    )}
                     {m.widget?.type === 'calendar' && (
                       <CalendarWidget appointments={m.widget.appointments} />
                     )}
@@ -662,3 +789,4 @@ function HomePage() {
     </div>
   );
 }
+

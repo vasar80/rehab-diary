@@ -101,10 +101,13 @@ export default function CalendarWidget({ appointments, monthOffset = 0 }: Calend
             return (
               <div
                 key={i}
-                className="aspect-square flex flex-col items-center justify-center rounded-xl text-sm text-text-muted"
+                className="aspect-square flex items-center justify-center rounded-xl text-sm font-semibold text-text relative"
               >
-                <span className="leading-none">{cell.day}</span>
-                <span className="text-danger text-[11px] font-bold leading-none mt-0.5">✕</span>
+                <span className="leading-none relative z-0">{cell.day}</span>
+                <svg viewBox="0 0 24 24" className="absolute inset-1 pointer-events-none z-10" preserveAspectRatio="xMidYMid meet">
+                  <line x1="5" y1="5" x2="19" y2="19" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
+                  <line x1="19" y1="5" x2="5" y2="19" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" opacity="0.85" />
+                </svg>
               </div>
             );
           }
@@ -132,6 +135,27 @@ export default function CalendarWidget({ appointments, monthOffset = 0 }: Calend
           );
         })}
       </div>
+
+      {appointments.filter((a) => a.date.getTime() < today.getTime()).length > 0 && (
+        <div className="mt-4 pt-3 border-t border-white/40 space-y-1.5">
+          <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">Già fatti</p>
+          {appointments
+            .filter((a) => a.date.getTime() < today.getTime())
+            .sort((a, b) => a.date.getTime() - b.date.getTime())
+            .map((a) => {
+              const d = new Date(a.date);
+              const dd = d.getDate();
+              const mm = MONTHS[d.getMonth()].slice(0, 3).toLowerCase();
+              return (
+                <div key={a.id} className="flex items-center gap-2 text-sm">
+                  <span className="text-danger text-[14px] font-bold leading-none shrink-0 w-3 text-center">✕</span>
+                  <span className="text-text-muted text-xs font-semibold shrink-0">{dd} {mm} · {a.time}</span>
+                  <span className="text-text-muted truncate line-through decoration-text-muted/40">{TYPE_META[a.type].short}</span>
+                </div>
+              );
+            })}
+        </div>
+      )}
 
       <div className="mt-4 pt-3 border-t border-white/40 space-y-1.5">
         <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">Prossimi</p>

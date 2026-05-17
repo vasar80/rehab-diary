@@ -12,12 +12,16 @@ import {
   Loader2,
   Lock,
   X,
+  Download,
+  Trash2,
+  ShieldCheck,
 } from 'lucide-react';
 import SideMenu, { HamburgerButton } from '@/components/SideMenu';
 import ChatInputBar from '@/components/ChatInputBar';
 import Wordmark from '@/components/Wordmark';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
+import { auth as firebaseAuth } from '@/lib/firebase';
 
 export default function ProfiloPage() {
   const router = useRouter();
@@ -28,6 +32,11 @@ export default function ProfiloPage() {
   const [ownerPwdOpen, setOwnerPwdOpen] = useState(false);
   const [ownerPwd, setOwnerPwd] = useState('');
   const [ownerPwdError, setOwnerPwdError] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -86,6 +95,63 @@ export default function ProfiloPage() {
     router.push('/login');
   }
 
+  async function handleExport() {
+    setActionError('');
+    setExporting(true);
+    try {
+      const fb = firebaseAuth.currentUser;
+      if (!fb) throw new Error('Devi accedere con un account reale per esportare i dati.');
+      const token = await fb.getIdToken();
+      const res = await fetch('/api/me/export', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Errore ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kinora-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Errore esportazione');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (deleteConfirm !== 'ELIMINA') {
+      setActionError('Scrivi ELIMINA in maiuscolo per confermare.');
+      return;
+    }
+    setActionError('');
+    setDeleting(true);
+    try {
+      const fb = firebaseAuth.currentUser;
+      if (!fb) throw new Error('Devi accedere con un account reale per cancellare i dati.');
+      const token = await fb.getIdToken();
+      const res = await fetch('/api/me/delete', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'ELIMINA' }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Errore ${res.status}`);
+      }
+      try { await logout(); } catch {}
+      setUser(null);
+      router.push('/login');
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Errore cancellazione');
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <header className="px-4 pt-12 pb-3 flex-shrink-0 sticky top-0 z-20 backdrop-blur-md bg-white/40 border-b border-white/40">
@@ -138,7 +204,34 @@ export default function ProfiloPage() {
           )}
         </Section>
 
-        <Section title="Account" stagger={4}>
+        <Section title="Privacy e dati" stagger={4}>
+          <ListItem
+            icon={<ShieldCheck size={20} strokeWidth={1.7} className="text-text-secondary" />}
+            title="Informativa privacy"
+            subtitle="Leggi come trattiamo i tuoi dati"
+            onClick={() => router.push('/privacy')}
+          />
+          <ListItem
+            icon={exporting ? <Loader2 size={20} className="animate-spin text-text-secondary" /> : <Download size={20} strokeWidth={1.7} className="text-text-secondary" />}
+            title="Esporta i miei dati"
+            subtitle="Diritto di portabilità (art. 20 GDPR)"
+            onClick={exporting ? undefined : handleExport}
+          />
+          <ListItem
+            icon={<Trash2 size={20} strokeWidth={1.7} className="text-danger" />}
+            title="Cancella account e dati"
+            subtitle="Diritto all'oblio (art. 17 GDPR)"
+            onClick={() => { setDeleteConfirm(''); setActionError(''); setDeleteOpen(true); }}
+          />
+        </Section>
+
+        {actionError && (
+          <div className="mt-3 mx-2 bg-danger/10 border border-danger/30 rounded-2xl px-4 py-2.5">
+            <p className="text-danger text-sm font-medium">{actionError}</p>
+          </div>
+        )}
+
+        <Section title="Account" stagger={5}>
           <ListItem
             icon={<LogOut size={20} strokeWidth={1.7} className="text-danger" />}
             title="Esci"
@@ -156,6 +249,66 @@ export default function ProfiloPage() {
       <ChatInputBar />
 
       <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">
+          <form
+            onSubmit={(e) => { e.preventDefault(); handleDelete(); }}
+            className="glass-strong w-full rounded-t-[2.5rem] p-5 pb-10 animate-slide-up max-w-md mx-auto"
+          >
+            <div className="w-12 h-1 bg-text-muted/30 rounded-full mx-auto mb-5" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-danger/15 flex items-center justify-center">
+                  <Trash2 size={18} className="text-danger" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-text">Cancella account</h3>
+                  <p className="text-[11px] text-text-secondary">Azione irreversibile</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                className="w-10 h-10 rounded-2xl bg-white/60 flex items-center justify-center"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-text text-sm leading-relaxed mb-3">
+              Eliminerò entro 30 giorni tutti i tuoi dati: profilo, diari, contratto, video, sottoscrizioni alle notifiche e file su Drive collegati. L&apos;account Firebase verrà disattivato e cancellato a fine periodo.
+            </p>
+            <p className="text-text text-sm leading-relaxed mb-3">
+              Per confermare, scrivi <strong>ELIMINA</strong> in maiuscolo qui sotto.
+            </p>
+            <input
+              type="text"
+              autoFocus
+              value={deleteConfirm}
+              onChange={(e) => { setDeleteConfirm(e.target.value); setActionError(''); }}
+              placeholder="ELIMINA"
+              className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-danger focus:bg-white transition-all"
+            />
+            {actionError && (
+              <p className="text-danger text-sm font-medium mt-2 px-1">{actionError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={deleteConfirm !== 'ELIMINA' || deleting}
+              className="w-full mt-3 bg-danger text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all"
+            >
+              {deleting ? <Loader2 size={18} className="animate-spin" /> : <><Trash2 size={18} /> Cancella tutto</>}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(false)}
+              className="w-full mt-2 text-text-secondary text-sm py-2 font-medium"
+            >
+              Annulla
+            </button>
+          </form>
+        </div>
+      )}
 
       {ownerPwdOpen && (
         <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">
