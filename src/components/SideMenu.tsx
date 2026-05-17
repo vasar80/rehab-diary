@@ -62,7 +62,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
             <div className="flex items-center gap-2.5">
               {!imgError && (
                 <img
-                  src="/resilients.png"
+                  src="/resilients.PNG"
                   alt=""
                   className="w-9 h-9 rounded-xl object-contain"
                   onError={() => setImgError(true)}

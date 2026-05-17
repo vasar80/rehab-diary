@@ -158,7 +158,7 @@ function HomePage() {
           <div className="glass-strong rounded-full px-3 py-1.5 flex items-center gap-2">
             {!logoError && (
               <img
-                src="/resilients.png"
+                src="/resilients.PNG"
                 alt=""
                 className="w-6 h-6 rounded-md object-contain"
                 onError={() => setLogoError(true)}
