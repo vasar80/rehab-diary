@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, Loader2 } from 'lucide-react';
-import BottomNav from '@/components/BottomNav';
 import SideMenu, { HamburgerButton } from '@/components/SideMenu';
+import ProfileButton from '@/components/ProfileButton';
+import Wordmark from '@/components/Wordmark';
 import { useAppStore } from '@/lib/store';
 
 export default function HomePageWrapper() {
@@ -34,7 +35,6 @@ function HomePage() {
   const [history, setHistory] = useState<ChatMsg[]>([]);
   const [thinking, setThinking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [logoError, setLogoError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const name = user?.name?.split(' ')[0] || 'Mario';
@@ -125,10 +125,20 @@ function HomePage() {
       setHistory([]);
       setInput('');
       router.replace('/');
-    } else if (prompt === 'appointments') {
+      return;
+    }
+    if (prompt === 'appointments') {
       send('Quali sono i miei prossimi appuntamenti di terapia?');
       router.replace('/');
+      return;
     }
+    try {
+      const pending = sessionStorage.getItem('pendingPrompt');
+      if (pending) {
+        sessionStorage.removeItem('pendingPrompt');
+        send(pending);
+      }
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -153,25 +163,15 @@ function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="flex-shrink-0 pt-12 pb-3 px-4">
-        <div className="mx-auto max-w-md flex items-center justify-between">
+        <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
           <HamburgerButton onClick={() => setMenuOpen(true)} />
-          <div className="glass-strong rounded-full px-3 py-1.5 flex items-center gap-2">
-            {!logoError && (
-              <img
-                src="/resilients.PNG"
-                alt=""
-                className="w-6 h-6 rounded-md object-contain"
-                onError={() => setLogoError(true)}
-              />
-            )}
-            <span className="text-text font-bold text-sm">Resilients</span>
-          </div>
-          <div className="w-11 h-11" />
+          <Wordmark text="Kinora" className="text-3xl font-bold" />
+          <ProfileButton />
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '170px' }}>
-        <div className="mx-auto max-w-md px-5 py-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ paddingBottom: '120px' }}>
+        <div className="mx-auto max-w-md lg:max-w-2xl px-5 py-3">
           {history.length === 0 ? (
             <div />
           ) : (
@@ -200,14 +200,14 @@ function HomePage() {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 z-30 pointer-events-none" style={{ bottom: '88px' }}>
-        <div className="mx-auto max-w-md px-4 pointer-events-auto">
+      <div className="fixed inset-x-0 z-30 pointer-events-none bottom-5 sm:bottom-6">
+        <div className="mx-auto max-w-md lg:max-w-2xl px-4 pointer-events-auto">
           <form onSubmit={handleSend} className="flex items-center gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Chiedi a Resilients…"
+              placeholder="Chiedi a Kinora…"
               disabled={thinking}
               className="flex-1 glass-strong rounded-full px-5 py-3.5 text-[15px] text-text placeholder:text-text-muted focus:outline-none focus:border-primary disabled:opacity-60"
             />
@@ -228,8 +228,6 @@ function HomePage() {
         onClose={() => setMenuOpen(false)}
         onNewChat={handleNewChat}
       />
-
-      <BottomNav />
     </div>
   );
 }

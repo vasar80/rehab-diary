@@ -9,23 +9,29 @@ import {
   Heart,
   Calendar,
   LayoutDashboard,
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
-import BottomNav from '@/components/BottomNav';
+import SideMenu, { HamburgerButton } from '@/components/SideMenu';
+import ChatInputBar from '@/components/ChatInputBar';
+import Wordmark from '@/components/Wordmark';
 import { useAppStore } from '@/lib/store';
+import { useAuth } from '@/lib/auth-context';
 
 export default function ProfiloPage() {
   const router = useRouter();
   const { user, setUser, entries, contractItems } = useAppStore();
+  const { logout } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 size={28} className="animate-spin text-primary" />
       </div>
     );
   }
@@ -33,7 +39,6 @@ export default function ProfiloPage() {
   const name = user?.name || 'Mario Rossi';
   const email = user?.email || 'mario.rossi@email.it';
   const role = user?.role || 'patient';
-  const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2);
   const completedEntries = entries.filter((e) => e.completedAt).length;
   const activeContracts = contractItems.filter((ci) => ci.isActive).length;
 
@@ -43,6 +48,7 @@ export default function ProfiloPage() {
       role: 'admin',
       name: 'Dr.ssa Laura Bianchi',
       email: 'l.bianchi@rehabclinic.it',
+      sex: 'F',
       isDemo: true,
     });
     router.push('/admin');
@@ -54,71 +60,69 @@ export default function ProfiloPage() {
       role: 'patient',
       name: 'Mario Rossi',
       email: 'mario.rossi@email.it',
+      sex: 'M',
       isDemo: true,
     });
     router.push('/');
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try { await logout(); } catch {}
     setUser(null);
     router.push('/login');
   }
 
   return (
-    <div className="min-h-screen pb-32 relative">
-      <header className="px-5 pt-14 pb-6 animate-fade-in">
-        <div className="mx-auto max-w-md flex flex-col items-center">
-          <div className="relative">
-            <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-50 scale-125" />
-            <div className="relative w-24 h-24 gradient-primary rounded-3xl flex items-center justify-center text-3xl font-bold text-white shadow-2xl glow-primary">
-              {initials}
-            </div>
-          </div>
-          <h1 className="text-text text-2xl font-bold mt-4">{name}</h1>
-          <p className="text-text-secondary text-sm mt-0.5">{email}</p>
-          <span className="mt-3 glass rounded-full px-4 py-1 text-xs font-bold text-primary uppercase tracking-wider">
-            {role === 'admin' ? 'Terapista' : 'Paziente'}
-          </span>
+    <div className="min-h-screen flex flex-col relative">
+      <header className="px-4 pt-12 pb-3 flex-shrink-0">
+        <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
+          <HamburgerButton onClick={() => setMenuOpen(true)} />
+          <Wordmark text="Kinora" className="text-3xl font-bold" />
+          <div className="w-11 h-11" />
         </div>
       </header>
 
-      <main className="px-5 mx-auto max-w-md space-y-5">
-        <div className="grid grid-cols-3 gap-3 animate-fade-in">
+      <main className="flex-1 px-5 mx-auto max-w-md lg:max-w-2xl w-full pb-32">
+        <div className="text-center pt-10 animate-fade-in">
+          <Wordmark text={name} className="text-5xl font-bold" />
+          <p className="text-text-secondary text-sm mt-3">{email}</p>
+          <span className="inline-block mt-3 glass rounded-full px-4 py-1 text-xs font-bold text-primary uppercase tracking-wider">
+            {role === 'admin' ? 'Terapista' : role === 'super_admin' ? 'Super Admin' : 'Paziente'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mt-8 animate-fade-in stagger-1">
           <StatBox value={completedEntries} label="Report" />
           <StatBox value={activeContracts} label="Impegni" />
           <StatBox value={format(new Date('2025-04-01'), 'dd/MM', { locale: it })} label="Inizio" />
         </div>
 
-        <Section title="Il mio percorso" stagger={1}>
+        <Section title="Il mio percorso" stagger={2}>
           <ListItem
-            icon={<FileText size={20} className="text-white" strokeWidth={2.5} />}
-            gradient="gradient-primary"
+            icon={<FileText size={20} strokeWidth={1.7} className="text-text-secondary" />}
             title="Il mio contratto"
             subtitle={`${activeContracts} impegni attivi`}
             onClick={() => router.push('/contratto')}
           />
           <ListItem
-            icon={<Calendar size={20} className="text-white" strokeWidth={2.5} />}
-            gradient="gradient-warm"
+            icon={<Calendar size={20} strokeWidth={1.7} className="text-text-secondary" />}
             title="Storico report"
             subtitle={`${completedEntries} compilazioni`}
             onClick={() => router.push('/video')}
           />
         </Section>
 
-        <Section title="Cambia vista" stagger={2}>
+        <Section title="Cambia vista" stagger={3}>
           {role !== 'admin' ? (
             <ListItem
-              icon={<LayoutDashboard size={20} className="text-white" strokeWidth={2.5} />}
-              gradient="gradient-cool"
+              icon={<LayoutDashboard size={20} strokeWidth={1.7} className="text-text-secondary" />}
               title="Dashboard Terapista"
               subtitle="Visualizza i dati dei pazienti"
               onClick={handleSwitchToAdmin}
             />
           ) : (
             <ListItem
-              icon={<Heart size={20} className="text-white" strokeWidth={2.5} />}
-              gradient="gradient-primary"
+              icon={<Heart size={20} strokeWidth={1.7} className="text-text-secondary" />}
               title="Vista Paziente"
               subtitle="Torna al diario"
               onClick={handleSwitchToPatient}
@@ -126,10 +130,9 @@ export default function ProfiloPage() {
           )}
         </Section>
 
-        <Section title="Account" stagger={3}>
+        <Section title="Account" stagger={4}>
           <ListItem
-            icon={<LogOut size={20} className="text-white" strokeWidth={2.5} />}
-            gradient="gradient-sunset"
+            icon={<LogOut size={20} strokeWidth={1.7} className="text-danger" />}
             title="Esci"
             subtitle="Disconnetti il tuo account"
             onClick={handleLogout}
@@ -137,15 +140,14 @@ export default function ProfiloPage() {
           />
         </Section>
 
-        <div className="text-center pt-2 animate-fade-in stagger-4">
-          <div className="flex items-center justify-center gap-1.5 text-text-muted">
-            <Heart size={12} className="text-primary" fill="currentColor" />
-            <span className="text-xs font-medium">RehabDiary v1.0</span>
-          </div>
+        <div className="text-center pt-6 animate-fade-in stagger-5">
+          <p className="text-[11px] text-text-muted">Kinora v1.0</p>
         </div>
       </main>
 
-      <BottomNav />
+      <ChatInputBar />
+
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>
   );
 }
@@ -169,23 +171,21 @@ function Section({
   stagger: number;
 }) {
   return (
-    <div className={`space-y-2 animate-fade-in stagger-${stagger}`}>
-      <h2 className="text-xs font-bold text-text-secondary px-1 uppercase tracking-wider">{title}</h2>
-      {children}
+    <div className={`mt-6 animate-fade-in stagger-${stagger}`}>
+      <h2 className="text-[11px] font-bold text-text-secondary px-2 uppercase tracking-wider mb-2">{title}</h2>
+      <div className="space-y-0.5">{children}</div>
     </div>
   );
 }
 
 function ListItem({
   icon,
-  gradient,
   title,
   subtitle,
   onClick,
   noChevron,
 }: {
   icon: React.ReactNode;
-  gradient: string;
   title: string;
   subtitle: string;
   onClick?: () => void;
@@ -194,16 +194,11 @@ function ListItem({
   return (
     <button
       onClick={onClick}
-      className="w-full glass rounded-3xl p-4 flex items-center gap-4 active:scale-[0.98] transition-transform text-left"
+      className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl active:bg-white/50 transition-colors text-left"
     >
-      <div className="relative shrink-0">
-        <div className={`absolute inset-0 ${gradient} rounded-2xl blur-md opacity-40`} />
-        <div className={`relative w-11 h-11 rounded-2xl ${gradient} flex items-center justify-center`}>
-          {icon}
-        </div>
-      </div>
+      <span className="shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className="font-bold text-text text-sm">{title}</p>
+        <p className="font-semibold text-text text-[15px]">{title}</p>
         <p className="text-xs text-text-secondary truncate">{subtitle}</p>
       </div>
       {!noChevron && <ChevronRight size={16} className="text-text-muted shrink-0" />}

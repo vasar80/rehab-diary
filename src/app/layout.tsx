@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import Providers from "@/components/Providers";
 import "./globals.css";
 
@@ -8,14 +8,19 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+});
+
 export const metadata: Metadata = {
-  title: "RehabDiary — Il tuo diario riabilitativo",
-  description: "Monitora il tuo percorso di riabilitazione quotidianamente",
+  title: "Kinora",
+  description: "Il tuo compagno quotidiano nel percorso di riabilitazione",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "RehabDiary",
+    title: "Kinora",
   },
 };
 
@@ -24,7 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0D9488",
+  themeColor: "#322A6E",
 };
 
 export default function RootLayout({
@@ -33,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it" className={`${inter.variable} h-full`}>
+    <html lang="it" className={`${inter.variable} ${playfair.variable} h-full`}>
       <body className="min-h-full bg-bg font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

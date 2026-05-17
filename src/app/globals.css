@@ -1,26 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #14b8a6;
-  --color-primary-dark: #0f766e;
-  --color-primary-darker: #115e59;
-  --color-primary-light: #99f6e4;
-  --color-primary-glow: #2dd4bf;
+  --color-primary: #322A6E;
+  --color-primary-dark: #1E1647;
+  --color-primary-darker: #14102F;
+  --color-primary-light: #6B5DA8;
+  --color-primary-glow: #4A3F8C;
 
-  --color-accent: #f97316;
-  --color-accent-warm: #fb923c;
-  --color-accent-pink: #ec4899;
-  --color-accent-purple: #a855f7;
+  --color-accent: #E85A7A;
+  --color-accent-light: #F4A6B7;
+  --color-accent-dark: #C13E5E;
+  --color-accent-warm: #F4A6B7;
+  --color-accent-pink: #E85A7A;
+  --color-accent-purple: #6B5DA8;
   --color-accent-blue: #38bdf8;
 
-  --color-surface: #ffffff;
-  --color-bg: #fafaf9;
+  --color-brand-pink: #E85A7A;
+  --color-brand-violet: #322A6E;
 
-  --color-text: #0c0a09;
-  --color-text-secondary: #57534e;
-  --color-text-muted: #a8a29e;
+  --color-surface: #ffffff;
+  --color-bg: #fbf7f9;
+
+  --color-text: #14102F;
+  --color-text-secondary: #57516e;
+  --color-text-muted: #9088a8;
   --color-border: rgba(255, 255, 255, 0.5);
-  --color-border-strong: rgba(231, 229, 228, 0.8);
+  --color-border-strong: rgba(231, 229, 240, 0.8);
 
   --color-success: #10b981;
   --color-success-light: #d1fae5;
@@ -30,6 +35,7 @@
   --color-danger-light: #fee2e2;
 
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
 
   --radius-sm: 0.625rem;
   --radius-md: 1rem;
@@ -62,12 +68,12 @@ body::before {
   inset: 0;
   z-index: -2;
   background:
-    radial-gradient(ellipse 60% 40% at 10% -5%, rgba(45, 212, 191, 0.65) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 40% at 95% 5%, rgba(251, 146, 60, 0.5) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 50%, rgba(236, 72, 153, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 45% at 5% 60%, rgba(168, 85, 247, 0.42) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(56, 189, 248, 0.45) 0%, transparent 60%),
-    linear-gradient(180deg, #faf7f5 0%, #f5f5f4 100%);
+    radial-gradient(ellipse 60% 40% at 10% -5%, rgba(232, 90, 122, 0.42) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 40% at 95% 5%, rgba(50, 42, 110, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 50%, rgba(244, 166, 183, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 5% 60%, rgba(107, 93, 168, 0.38) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(232, 90, 122, 0.3) 0%, transparent 60%),
+    linear-gradient(180deg, #fbf7f9 0%, #f6f3f7 100%);
   background-attachment: fixed;
 }
 
@@ -121,20 +127,20 @@ input, textarea, select {
 }
 
 .glass-tinted-primary {
-  background: linear-gradient(135deg, rgba(45, 212, 191, 0.15), rgba(20, 184, 166, 0.08));
+  background: linear-gradient(135deg, rgba(107, 93, 168, 0.18), rgba(50, 42, 110, 0.08));
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(45, 212, 191, 0.3);
+  border: 1px solid rgba(107, 93, 168, 0.3);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 8px 32px -8px rgba(15, 118, 110, 0.15);
+    0 8px 32px -8px rgba(50, 42, 110, 0.15);
 }
 
 .glass-tinted-warm {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(236, 72, 153, 0.08));
+  background: linear-gradient(135deg, rgba(232, 90, 122, 0.18), rgba(244, 166, 183, 0.08));
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(251, 146, 60, 0.3);
+  border: 1px solid rgba(232, 90, 122, 0.3);
 }
 
 .glass-dark {
@@ -147,34 +153,38 @@ input, textarea, select {
 /* === Gradient utilities === */
 
 .gradient-primary {
-  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 60%, #0ea5e9 100%);
+  background: linear-gradient(135deg, #322A6E 0%, #1E1647 100%);
+}
+
+.gradient-brand {
+  background: linear-gradient(135deg, #E85A7A 0%, #322A6E 100%);
 }
 
 .gradient-warm {
-  background: linear-gradient(135deg, #fb923c 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #F4A6B7 0%, #E85A7A 100%);
 }
 
 .gradient-cool {
-  background: linear-gradient(135deg, #a855f7 0%, #14b8a6 100%);
+  background: linear-gradient(135deg, #6B5DA8 0%, #322A6E 100%);
 }
 
 .gradient-sunset {
-  background: linear-gradient(135deg, #f97316 0%, #ec4899 50%, #a855f7 100%);
+  background: linear-gradient(135deg, #F4A6B7 0%, #E85A7A 50%, #322A6E 100%);
 }
 
 .gradient-mint {
-  background: linear-gradient(135deg, #99f6e4 0%, #67e8f9 100%);
+  background: linear-gradient(135deg, #F4A6B7 0%, #6B5DA8 100%);
 }
 
 .gradient-text-primary {
-  background: linear-gradient(135deg, #0f766e 0%, #0891b2 100%);
+  background: linear-gradient(135deg, #E85A7A 0%, #322A6E 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .gradient-text-warm {
-  background: linear-gradient(135deg, #fb923c 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #F4A6B7 0%, #E85A7A 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -184,16 +194,23 @@ input, textarea, select {
 
 .glow-primary {
   box-shadow:
-    0 0 0 1px rgba(45, 212, 191, 0.2),
-    0 8px 32px -4px rgba(20, 184, 166, 0.35),
-    0 4px 12px -2px rgba(20, 184, 166, 0.2);
+    0 0 0 1px rgba(50, 42, 110, 0.2),
+    0 8px 32px -4px rgba(50, 42, 110, 0.4),
+    0 4px 12px -2px rgba(50, 42, 110, 0.25);
 }
 
 .glow-warm {
   box-shadow:
-    0 0 0 1px rgba(251, 146, 60, 0.2),
-    0 8px 32px -4px rgba(236, 72, 153, 0.3),
-    0 4px 12px -2px rgba(251, 146, 60, 0.2);
+    0 0 0 1px rgba(232, 90, 122, 0.2),
+    0 8px 32px -4px rgba(232, 90, 122, 0.35),
+    0 4px 12px -2px rgba(232, 90, 122, 0.2);
+}
+
+.glow-brand {
+  box-shadow:
+    0 0 0 1px rgba(232, 90, 122, 0.2),
+    0 8px 32px -4px rgba(232, 90, 122, 0.3),
+    0 8px 32px -4px rgba(50, 42, 110, 0.35);
 }
 
 .glow-soft {
@@ -214,19 +231,23 @@ input, textarea, select {
 }
 
 .blob-teal {
-  background: radial-gradient(circle, #2dd4bf 0%, transparent 70%);
+  background: radial-gradient(circle, #6B5DA8 0%, transparent 70%);
 }
 
 .blob-warm {
-  background: radial-gradient(circle, #fb923c 0%, transparent 70%);
+  background: radial-gradient(circle, #E85A7A 0%, transparent 70%);
 }
 
 .blob-pink {
-  background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+  background: radial-gradient(circle, #F4A6B7 0%, transparent 70%);
 }
 
 .blob-purple {
-  background: radial-gradient(circle, #a855f7 0%, transparent 70%);
+  background: radial-gradient(circle, #322A6E 0%, transparent 70%);
+}
+
+.font-display {
+  font-family: var(--font-playfair), Georgia, serif;
 }
 
 /* === Animations === */

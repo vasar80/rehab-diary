@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Upload,
   Video as VideoIcon,
@@ -10,16 +9,16 @@ import {
   X,
   CheckCircle,
   Loader2,
-  MessageCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import SideMenu, { HamburgerButton } from '@/components/SideMenu';
+import ProfileButton from '@/components/ProfileButton';
+import ChatInputBar from '@/components/ChatInputBar';
 import { useAppStore } from '@/lib/store';
 import { RehabVideo } from '@/lib/types';
 
 export default function VideoPage() {
-  const router = useRouter();
   const { user, videos, addVideo } = useAppStore();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,14 +129,14 @@ export default function VideoPage() {
   return (
     <div className="min-h-screen flex flex-col relative">
       <header className="px-4 pt-12 pb-3 flex-shrink-0">
-        <div className="mx-auto max-w-md flex items-center justify-between">
+        <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
           <HamburgerButton onClick={() => setMenuOpen(true)} />
           <h1 className="text-text font-bold text-base">Video</h1>
-          <div className="w-11 h-11" />
+          <ProfileButton />
         </div>
       </header>
 
-      <main className="flex-1 px-5 mx-auto max-w-md w-full">
+      <main className="flex-1 px-5 mx-auto max-w-md lg:max-w-2xl w-full">
         {!hasVideos ? (
           <div className="flex flex-col items-center justify-center pt-32 pb-16 animate-fade-in">
             <button
@@ -183,13 +182,7 @@ export default function VideoPage() {
         )}
       </main>
 
-      <button
-        onClick={() => router.push('/')}
-        aria-label="Chat"
-        className="fixed bottom-6 right-5 z-30 w-14 h-14 rounded-full gradient-primary text-white shadow-2xl shadow-primary/40 glow-primary active:scale-95 transition-transform flex items-center justify-center"
-      >
-        <MessageCircle size={24} strokeWidth={2.5} />
-      </button>
+      <ChatInputBar />
 
       {showUpload && (
         <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">
