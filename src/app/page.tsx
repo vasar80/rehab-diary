@@ -182,6 +182,11 @@ function HomePage() {
       }
     }
 
+    // During the home intro (multiple bot messages, no user yet) we let messages
+    // stack from the top — don't yank the latest to the top of the viewport.
+    const lastMsg = history[history.length - 1];
+    if (lastMsg?.kind === 'intro') return;
+
     const lastBotIdx = (() => {
       for (let i = history.length - 1; i >= 0; i--) {
         if (history[i].role === 'assistant') return i;
@@ -660,6 +665,32 @@ function HomePage() {
                 </div>
               );
             }
+            if (isIntro && m.role === 'assistant') {
+              const introClasses = `font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`;
+              return (
+                <div key={m.id} id={`msg-${m.id}`} className="py-1 animate-fade-in">
+                  <div className="relative">
+                    <span aria-hidden className={`${introClasses} invisible`}>{m.text}</span>
+                    <TypewriterTwoColor
+                      key={m.id}
+                      text={m.text}
+                      speed={20}
+                      className={`${introClasses} absolute inset-0`}
+                    />
+                  </div>
+                  {m.inlineAction && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => handleInlineAction(m.inlineAction!.action)}
+                        className="glass-strong rounded-full px-5 py-2.5 text-[14px] font-semibold text-text active:scale-95 transition-transform"
+                      >
+                        {m.inlineAction.label}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            }
             return (
               <div key={m.id} id={`msg-${m.id}`} className={`${m.role === 'user' ? 'flex justify-end' : ''} animate-fade-in`}>
                 {m.role === 'user' ? (
@@ -670,23 +701,9 @@ function HomePage() {
                   <div>
                     <div className="glass rounded-3xl rounded-bl-md px-4 py-2.5 max-w-[88%]">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {isIntro ? (
-                          <TypewriterTwoColor text={m.text} speed={20} />
-                        ) : (
-                          <TwoColorInline text={m.text} />
-                        )}
+                        <TwoColorInline text={m.text} />
                       </p>
                     </div>
-                    {m.inlineAction && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => handleInlineAction(m.inlineAction!.action)}
-                          className="glass-strong rounded-full px-4 py-2 text-[13px] font-semibold text-text active:scale-95 transition-transform"
-                        >
-                          {m.inlineAction.label}
-                        </button>
-                      </div>
-                    )}
                     {m.widget?.type === 'calendar' && (
                       <CalendarWidget appointments={m.widget.appointments} />
                     )}
