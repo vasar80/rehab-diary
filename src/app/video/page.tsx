@@ -139,7 +139,7 @@ export default function VideoPage() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      <header className="px-4 pt-12 pb-3 flex-shrink-0">
+      <header className="px-4 pt-12 pb-3 flex-shrink-0 sticky top-0 z-20 backdrop-blur-md bg-white/40 border-b border-white/40">
         <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
           <HamburgerButton onClick={() => setMenuOpen(true)} />
           <h1 className="text-text font-bold text-base">Video</h1>

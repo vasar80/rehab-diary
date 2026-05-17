@@ -22,6 +22,7 @@ import {
   nextCommitment,
   buildContractItems,
 } from '@/lib/contract-script';
+import { generateUpcomingAppointments, formatAppointmentsAsChat } from '@/lib/appointments-mock';
 
 export default function HomePageWrapper() {
   return (
@@ -143,23 +144,25 @@ function HomePage() {
   useEffect(() => {
     if (!scrollRef.current) return;
     const container = scrollRef.current;
+    const containerRect = container.getBoundingClientRect();
 
-    // Prefer scrolling so the latest USER message's bottom edge is near the top
-    // of the viewport — that way the user sees what they just said + the bot's
-    // reply below it. If the user message is very long, only its tail stays
-    // visible at the top. If there's no user message yet (chat just started)
-    // we fall back to scrolling the latest bot message to the top.
+    // We want the latest USER bubble's bottom to sit ~80px from the top of the
+    // visible scroll area, so the bot's response starts comfortably under it
+    // (not pinned to the very edge). Use getBoundingClientRect so it works
+    // regardless of CSS positioning of intermediate ancestors.
     let lastUserIdx = -1;
     for (let i = history.length - 1; i >= 0; i--) {
       if (history[i].role === 'user') { lastUserIdx = i; break; }
     }
 
+    const tailVisible = 96; // visible portion of the user's tail at the top
+
     if (lastUserIdx >= 0) {
       const el = document.getElementById(`msg-${history[lastUserIdx].id}`);
       if (el) {
-        const tailVisible = 56; // px of the user message's tail kept visible at top
-        const target = el.offsetTop + el.offsetHeight - tailVisible;
-        container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+        const elRect = el.getBoundingClientRect();
+        const deltaToTop = elRect.bottom - containerRect.top - tailVisible;
+        container.scrollTo({ top: Math.max(0, container.scrollTop + deltaToTop), behavior: 'smooth' });
         return;
       }
     }
@@ -173,7 +176,9 @@ function HomePage() {
     if (lastBotIdx < 0) return;
     const botEl = document.getElementById(`msg-${history[lastBotIdx].id}`);
     if (botEl) {
-      container.scrollTo({ top: Math.max(0, botEl.offsetTop - 8), behavior: 'smooth' });
+      const elRect = botEl.getBoundingClientRect();
+      const deltaToTop = elRect.top - containerRect.top - 24;
+      container.scrollTo({ top: Math.max(0, container.scrollTop + deltaToTop), behavior: 'smooth' });
     }
   }, [history, currentStep]);
 
@@ -398,7 +403,21 @@ function HomePage() {
       return;
     }
     if (urlPrompt === 'appointments') {
-      sendFree('Quali sono i miei prossimi appuntamenti di terapia?');
+      const userMsg: ChatMsg = {
+        id: `u-${Date.now()}`,
+        role: 'user',
+        text: 'Quali sono i miei prossimi appuntamenti?',
+      };
+      const appts = generateUpcomingAppointments();
+      const botMsg: ChatMsg = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        text: formatAppointmentsAsChat(appts),
+      };
+      setHistory((h) => [...h, userMsg, botMsg]);
+      setMode('free');
+      setCurrentStep(null);
+      setCurrentCommitment(null);
       router.replace('/');
       return;
     }
@@ -477,7 +496,7 @@ function HomePage() {
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 pt-12 pb-3 px-4 z-20 relative">
+      <header className="flex-shrink-0 pt-12 pb-3 px-4 z-20 relative backdrop-blur-md bg-white/40 border-b border-white/40">
         <div className="mx-auto max-w-md lg:max-w-2xl flex items-center justify-between">
           <HamburgerButton onClick={() => setMenuOpen(true)} />
           <Wordmark text="Kinora" className="text-3xl font-bold" />
