@@ -57,7 +57,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
       <div className="fixed inset-0 z-[60] animate-fade-in">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={onClose} />
         <aside
-          className="absolute top-0 bottom-0 left-0 w-[88%] max-w-sm glass-strong flex flex-col"
+          className="absolute top-0 bottom-0 left-0 w-[88%] max-w-sm bg-stone-50 border-r border-stone-200 shadow-2xl shadow-stone-900/20 flex flex-col"
           style={{ animation: 'slide-in-left 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}
         >
           <div className="px-5 pt-12 pb-3 flex items-center justify-between">
@@ -79,7 +79,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
             </div>
           </div>
 
-          <div className="px-3 pb-2 space-y-0.5 border-b border-white/30">
+          <div className="px-3 pb-2 space-y-0.5 border-b border-stone-200">
             {ACTIONS.map((a) => (
               <button
                 key={a.key}
