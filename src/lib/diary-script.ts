@@ -2,7 +2,7 @@ import { DailyEntry, TernaryResponse } from './types';
 
 export interface DiaryAnswer {
   mood?: number;
-  moodReason?: string;
+  moodAcknowledged?: boolean;
   didTherapy?: boolean;
   therapyMinutes?: number;
   feeling?: number;
@@ -22,13 +22,15 @@ export type QuickOption = { label: string; value: string };
 export interface DiaryStep {
   id: string;
   question: string;
-  type: 'single' | 'multi' | 'text';
+  type: 'single' | 'multi' | 'text' | 'narrative';
   options?: QuickOption[];
   placeholder?: string;
   field: keyof DiaryAnswer;
   parse?: (value: string) => unknown;
   display?: (value: unknown) => string;
   visual?: string;
+  // narrative steps auto-advance after this many ms (default 3500)
+  nextDelay?: number;
 }
 
 export const MAL_ACTIONS = [
@@ -84,19 +86,17 @@ export function nextStep(answer: DiaryAnswer, sex?: 'M' | 'F'): DiaryStep | null
     };
   }
 
-  // Empathic interlude when mood is low (1 or 2): acknowledge with a reframe
-  // (compiling the diary itself is a small act of taking back control), invite
-  // a free-text note, then automatically continue with the rest of the diary.
-  if (answer.mood !== undefined && answer.mood <= 2) {
-    if (answer.moodReason === undefined) {
-      return {
-        id: 'mood-reason',
-        question: 'Mi dispiace. Compilare il diario adesso è già un piccolo modo per riprendere in mano la giornata. Se ti va raccontami cosa sta succedendo, altrimenti passiamo oltre.',
-        type: 'text',
-        placeholder: 'Anche solo una frase, o lascia vuoto per saltare',
-        field: 'moodReason',
-      };
-    }
+  // Empathic interlude when mood is low (1 or 2): the bot acknowledges and
+  // offers to talk after the diary, then auto-advances to the next question
+  // without asking the patient to do anything.
+  if (answer.mood !== undefined && answer.mood <= 2 && !answer.moodAcknowledged) {
+    return {
+      id: 'mood-acknowledge',
+      question: 'Mi dispiace. Se vuoi, quando abbiamo finito di compilare il diario puoi raccontarmi cosa sta succedendo e vediamo insieme cosa fare. Intanto procediamo.',
+      type: 'narrative',
+      field: 'moodAcknowledged',
+      nextDelay: 4000,
+    };
   }
 
   if (answer.didTherapy === undefined) {
@@ -245,7 +245,7 @@ function askCompensations(answer: DiaryAnswer): DiaryStep | null {
   if (answer.noticedCompensations === undefined) {
     return {
       id: 'compensations',
-      question: 'Hai notato dei movimenti involontari (compensi) durante i movimenti?',
+      question: 'Hai notato movimenti involontari (compensi) mentre svolgevi queste azioni?',
       type: 'single',
       options: [
         { label: 'Sì', value: 'yes' },

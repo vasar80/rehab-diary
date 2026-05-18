@@ -375,6 +375,29 @@ function HomePage() {
     }, 350);
   }
 
+  // Auto-advance narrative diary steps: the bot says the line, waits for the
+  // user to read it, then silently moves to the next question without asking
+  // for any input.
+  useEffect(() => {
+    if (mode !== 'diary') return;
+    if (!currentStep || currentStep.type !== 'narrative') return;
+    const delay = currentStep.nextDelay ?? 3500;
+    const t = setTimeout(() => {
+      const updated: DiaryAnswer = { ...diaryAnswer, [currentStep.field]: true };
+      setDiaryAnswer(updated);
+      const next = nextStep(updated, user?.sex);
+      if (next) {
+        setCurrentStep(next);
+        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question }]);
+      } else {
+        setCurrentStep(null);
+        finishDiary(updated);
+      }
+    }, delay);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, mode]);
+
   function startContract() {
     const empty: ContractAnswer = { accepted: [], rejected: [] };
     setContractAnswer(empty);
