@@ -1,7 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { ChatSession } from '@google/generative-ai';
 import { buildSystemPrompt } from '@/lib/system-prompt';
 import { getAdminDb } from '@/lib/firebase-admin';
+
+// Gemini routinely returns transient 503/429/500 when its free-tier model
+// hits a usage spike. We retry with exponential backoff before giving up
+// so the user doesn't see a one-shot failure.
+const TRANSIENT_RE = /\b(429|500|502|503|504)\b|unavailable|overload|rate.?limit|fetch failed|timeout|ECONN|ETIMEDOUT/i;
+
+async function sendMessageWithRetry(chat: ChatSession, text: string, attempts = 3): Promise<string> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const result = await chat.sendMessage(text);
+      return result.response.text();
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const transient = TRANSIENT_RE.test(msg);
+      const isLast = i === attempts - 1;
+      if (!transient || isLast) throw err;
+      // 450ms, 1300ms, 2800ms — plus a bit of jitter
+      const delay = 450 * Math.pow(2.5, i) + Math.random() * 250;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -108,13 +134,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const result = await chat.sendMessage(lastMessage.text);
-    const responseText = result.response.text();
+    const responseText = await sendMessageWithRetry(chat, lastMessage.text);
 
     return NextResponse.json({ text: responseText });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Chat error';
+    // Keep the full Gemini diagnostic in the server logs, but never leak it
+    // to the client — they get a short coded reason so the UI can render
+    // a friendly message.
     console.error('Chat API error:', message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (TRANSIENT_RE.test(message)) {
+      return NextResponse.json({ error: 'overloaded' }, { status: 503 });
+    }
+    return NextResponse.json({ error: 'internal' }, { status: 500 });
   }
 }

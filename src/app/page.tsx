@@ -226,16 +226,17 @@ function HomePage() {
           body: JSON.stringify({ messages: apiMessages, context: buildContext() }),
         });
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Errore ${res.status}`);
+          const body = await res.json().catch(() => ({}));
+          throw Object.assign(new Error(body.error || 'internal'), { status: res.status });
         }
         const data = await res.json();
         setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: data.text || '…' }]);
       } catch (err: unknown) {
-        setHistory((h) => [...h, {
-          id: `e-${Date.now()}`, role: 'assistant',
-          text: `Mi dispiace, c'è stato un problema (${err instanceof Error ? err.message : 'errore'}). Riprova tra poco.`,
-        }]);
+        const code = err instanceof Error ? err.message : '';
+        const text = code === 'overloaded'
+          ? 'In questo momento sto pensando lentamente perché tanti utenti mi stanno scrivendo. Riprova tra qualche secondo, riesco a risponderti meglio.'
+          : 'Mi dispiace, ho avuto un piccolo problema di connessione. Riprova tra poco — se continua a non funzionare avvisami.';
+        setHistory((h) => [...h, { id: `e-${Date.now()}`, role: 'assistant', text }]);
       } finally {
         setThinking(false);
       }
