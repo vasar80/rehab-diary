@@ -45,7 +45,7 @@ interface ChatMsg {
   widget?:
     | { type: 'calendar'; appointments: MockAppointment[] };
   inlineAction?: { action: 'diary' | 'appointments' | 'video'; label: string };
-  kind?: 'intro';
+  kind?: 'intro' | 'narrative';
 }
 
 function fontClassFor(text: string): string {
@@ -367,7 +367,8 @@ function HomePage() {
       const next = nextStep(updated, user?.sex);
       if (next) {
         setCurrentStep(next);
-        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question }]);
+        const kind = next.type === 'narrative' ? 'narrative' as const : undefined;
+        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question, kind }]);
       } else {
         setCurrentStep(null);
         finishDiary(updated);
@@ -388,7 +389,8 @@ function HomePage() {
       const next = nextStep(updated, user?.sex);
       if (next) {
         setCurrentStep(next);
-        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question }]);
+        const kind = next.type === 'narrative' ? 'narrative' as const : undefined;
+        setHistory((h) => [...h, { id: `a-${Date.now()}`, role: 'assistant', text: next.question, kind }]);
       } else {
         setCurrentStep(null);
         finishDiary(updated);
@@ -665,7 +667,8 @@ function HomePage() {
           {history.map((m, idx) => {
             const isLatestBot = idx === latestBotIdx;
             const isIntro = m.kind === 'intro';
-            if (isLatestBot && !isIntro && m.role === 'assistant') {
+            const isNarrative = m.kind === 'narrative';
+            if (isLatestBot && !isIntro && !isNarrative && m.role === 'assistant') {
               const textClasses = `font-display font-bold ${fontClassFor(m.text)} whitespace-pre-wrap block`;
               return (
                 <div key={m.id} id={`msg-${m.id}`} className="py-4 animate-fade-in min-h-[40vh]">
@@ -724,7 +727,11 @@ function HomePage() {
                   <div>
                     <div className="glass rounded-3xl rounded-bl-md px-4 py-2.5 max-w-[88%]">
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        <TwoColorInline text={m.text} />
+                        {isNarrative && isLatestBot ? (
+                          <TypewriterTwoColor text={m.text} speed={22} />
+                        ) : (
+                          <TwoColorInline text={m.text} />
+                        )}
                       </p>
                     </div>
                     {m.widget?.type === 'calendar' && (

@@ -22,6 +22,17 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Kinora",
   },
+  openGraph: {
+    title: "Kinora",
+    description: "Il tuo compagno quotidiano nel percorso di riabilitazione",
+    type: "website",
+    locale: "it_IT",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kinora",
+    description: "Il tuo compagno quotidiano nel percorso di riabilitazione",
+  },
 };
 
 export const viewport: Viewport = {

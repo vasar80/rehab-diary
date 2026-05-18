@@ -1,20 +1,20 @@
 {
-  "name": "RehabDiary",
-  "short_name": "RehabDiary",
-  "description": "Il tuo diario riabilitativo quotidiano",
+  "name": "Kinora",
+  "short_name": "Kinora",
+  "description": "Il tuo compagno quotidiano nel percorso di riabilitazione",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F5F5F4",
-  "theme_color": "#0D9488",
+  "background_color": "#FDF7F2",
+  "theme_color": "#322A6E",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
+      "src": "/icon",
+      "sizes": "256x256",
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
+      "src": "/apple-icon",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ]
