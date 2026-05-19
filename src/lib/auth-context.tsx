@@ -123,11 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole,
     sex?: 'M' | 'F'
   ) {
+    // Self-signup defaults: if the caller picked "patient" mode, they're a
+    // free-tier patient until upgraded. Staff registrations don't go through
+    // this form (they're provisioned by the admin panel).
+    const tier = role === 'patient' ? 'free' : undefined;
     const { data, error } = await supabase().auth.signUp({
       email,
       password,
       options: {
-        data: { name, role, sex }, // stored on auth.users.user_metadata
+        data: { name, role, sex, tier }, // stored on auth.users.user_metadata
       },
     });
     if (error) throw error;

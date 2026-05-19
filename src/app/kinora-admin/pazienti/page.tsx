@@ -5,7 +5,9 @@ import { Loader2, Search, Stethoscope, KeyRound, Check, X, Copy } from 'lucide-r
 import { getAccessToken } from '@/lib/supabase/client';
 
 interface PatientRow {
-  id: number;
+  id: number | string;
+  source: 'gestionale' | 'self-signup';
+  auth_uid: string | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -16,8 +18,10 @@ interface PatientRow {
   affected_side: string | null;
   lesion_date: string | null;
   therapist_name: string | null;
+  tier: 'care' | 'self' | 'free' | null;
   subscription_active: boolean;
   subscription_plan: string | null;
+  created_at: string | null;
 }
 
 type Market = 'all' | 'it' | 'es' | 'other';
@@ -332,6 +336,8 @@ export default function PazientiPage() {
                 {[
                   'Paziente',
                   'Email',
+                  'Origine',
+                  'Tier',
                   'Paese',
                   'Lesione',
                   'Terapista',
@@ -398,6 +404,53 @@ export default function PazientiPage() {
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569', fontSize: 12 }}>
                       {r.email}
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          background: r.source === 'gestionale' ? '#dbeafe' : '#fef3c7',
+                          color: r.source === 'gestionale' ? '#1e40af' : '#92400e',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          borderRadius: 99,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {r.source === 'gestionale' ? 'Gestionale' : 'Self-signup'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px' }}>
+                      {r.tier ? (
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            background:
+                              r.tier === 'care'
+                                ? 'linear-gradient(135deg, #E85A7A 0%, #6B5DA8 100%)'
+                                : r.tier === 'self'
+                                  ? '#ddd6fe'
+                                  : '#f1f5f9',
+                            color:
+                              r.tier === 'care'
+                                ? '#fff'
+                                : r.tier === 'self'
+                                  ? '#5b21b6'
+                                  : '#475569',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            borderRadius: 99,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          {r.tier}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>
+                      )}
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>
                       <span style={{ fontSize: 16 }}>{flagFor(r.country_code)}</span>{' '}
@@ -486,7 +539,7 @@ export default function PazientiPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     style={{
                       padding: 40,
                       textAlign: 'center',

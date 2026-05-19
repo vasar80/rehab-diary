@@ -4,7 +4,13 @@ import { isStaffEmail, isStaffMetadataRole } from '../../_lib/staff-gate';
 import { Client } from 'pg';
 
 interface PatientRow {
-  id: number;
+  // For internal patients, the Resilients id. For self-signup, the
+  // Supabase auth.users.id (UUID).
+  id: number | string;
+  source: 'gestionale' | 'self-signup';
+  // Linked auth uid (always present for self-signup; for internal it's
+  // present iff the staff has run "Crea login" for that patient).
+  auth_uid: string | null;
   first_name: string;
   last_name: string;
   email: string;
@@ -15,9 +21,12 @@ interface PatientRow {
   affected_side: string | null;
   lesion_date: string | null;
   therapist_name: string | null;
-  // Derived from latest user_subscriptionhistory record
+  // From Resilients (paid plan) or self-signup tier ('free' / 'self').
+  tier: 'care' | 'self' | 'free' | null;
   subscription_active: boolean;
   subscription_plan: string | null;
+  // ISO timestamp of when the self-signup or internal-login was created
+  created_at: string | null;
 }
 
 let cachedClient: Client | null = null;
@@ -152,17 +161,100 @@ export async function GET(request: NextRequest) {
       ORDER BY p.last_name ASC NULLS LAST, p.first_name ASC NULLS LAST
       LIMIT $4
     `;
-    const result = await c.query<PatientRow>(query, [
-      search,
-      `%${search}%`,
-      activeOnly,
-      limit,
-      market,
-    ]);
+    const result = await c.query<Omit<PatientRow, 'source' | 'auth_uid' | 'tier' | 'created_at'>>(
+      query,
+      [search, `%${search}%`, activeOnly, limit, market]
+    );
+
+    // Map of email → auth.users uid for internal patients that already have
+    // been provisioned (Crea login). Self-signup auth users (no patientId,
+    // role=patient) are surfaced as a SEPARATE bucket of rows below.
+    const internalEmails = new Set(
+      result.rows.map((r) => (r.email || '').toLowerCase().trim()).filter(Boolean)
+    );
+
+    const supaAdmin = createSupabaseAdminClient();
+    const { data: usersPage, error: usersErr } = await supaAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (usersErr) throw usersErr;
+
+    const authByEmail = new Map<
+      string,
+      { uid: string; tier: string | null; patientId: number | null; created_at: string }
+    >();
+    const selfSignups: PatientRow[] = [];
+
+    for (const u of usersPage.users) {
+      const email = (u.email || '').toLowerCase().trim();
+      const meta = (u.user_metadata || {}) as Record<string, unknown>;
+      const role = typeof meta.role === 'string' ? meta.role : null;
+      const tier = typeof meta.tier === 'string' ? meta.tier : null;
+      const patientId =
+        typeof meta.patientId === 'number'
+          ? meta.patientId
+          : typeof meta.patientId === 'string' && /^\d+$/.test(meta.patientId)
+            ? parseInt(meta.patientId, 10)
+            : null;
+
+      if (role !== 'patient') continue;
+      authByEmail.set(email, { uid: u.id, tier, patientId, created_at: u.created_at });
+
+      // Self-signup = role=patient AND no patientId AND not also present in
+      // the Resilients list under the same email.
+      if (!patientId && !internalEmails.has(email)) {
+        const name = (typeof meta.name === 'string' && meta.name) || email.split('@')[0];
+        const [first, ...rest] = name.split(' ');
+        selfSignups.push({
+          id: u.id,
+          source: 'self-signup',
+          auth_uid: u.id,
+          first_name: first || name,
+          last_name: rest.join(' ') || '',
+          email,
+          gender: (typeof meta.sex === 'string' ? meta.sex : null) ?? null,
+          city: null,
+          country_code: null,
+          lesion_type: null,
+          affected_side: null,
+          lesion_date: null,
+          therapist_name: null,
+          tier: (tier === 'free' || tier === 'self' || tier === 'care' ? tier : 'free'),
+          subscription_active: tier !== null && tier !== 'free' ? true : false,
+          subscription_plan: tier ? `Self-${tier}` : null,
+          created_at: u.created_at,
+        });
+      }
+    }
+
+    const internalRows: PatientRow[] = result.rows.map((r) => {
+      const email = (r.email || '').toLowerCase().trim();
+      const auth = authByEmail.get(email);
+      return {
+        ...r,
+        source: 'gestionale' as const,
+        auth_uid: auth?.uid ?? null,
+        // Internal patient tier is derived from their Resilients plan:
+        // any non-CUS_FRE active plan = 'care'.
+        tier: r.subscription_active ? 'care' : null,
+        created_at: auth?.created_at ?? null,
+      };
+    });
+
+    // Merge & sort: active first, then alphabetical by name.
+    const merged = [...internalRows, ...selfSignups].sort((a, b) => {
+      if (a.subscription_active !== b.subscription_active) {
+        return a.subscription_active ? -1 : 1;
+      }
+      return (a.last_name + a.first_name).localeCompare(b.last_name + b.first_name);
+    });
 
     return NextResponse.json({
-      rows: result.rows,
-      count: result.rows.length,
+      rows: merged,
+      count: merged.length,
+      internalCount: internalRows.length,
+      selfSignupCount: selfSignups.length,
       activeOnly,
     });
   } catch (error: unknown) {
