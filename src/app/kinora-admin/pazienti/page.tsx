@@ -14,6 +14,8 @@ interface PatientRow {
   gender: string | null;
   city: string | null;
   country_code: string | null;
+  marketplace_code: string | null;
+  marketplace_name: string | null;
   lesion_type: string | null;
   affected_side: string | null;
   lesion_date: string | null;
@@ -24,7 +26,8 @@ interface PatientRow {
   created_at: string | null;
 }
 
-type Market = 'all' | 'it' | 'es' | 'other';
+// matches core_marketplace.code
+type Market = 'all' | 'it-ITA' | 'es-INT' | 'other';
 
 function flagFor(code: string | null): string {
   if (!code) return '🏳';
@@ -186,8 +189,9 @@ export default function PazientiPage() {
         </h1>
         <p style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>
           {rows.length} pazienti{activeOnly ? ' attivi' : ' totali'}
-          {market !== 'all' && ` · mercato ${market.toUpperCase()}`}
-          {' · dal gestionale Resilients'}
+          {market === 'it-ITA' && ' · mercato Italian Italy'}
+          {market === 'es-INT' && ' · mercato Spanish International'}
+          {market === 'other' && ' · senza mercato assegnato'}
         </p>
       </header>
 
@@ -241,9 +245,9 @@ export default function PazientiPage() {
           {(
             [
               { id: 'all', label: 'Tutti' },
-              { id: 'it', label: '🇮🇹 Italia' },
-              { id: 'es', label: '🇪🇸 Spagna + LatAm' },
-              { id: 'other', label: 'Altri' },
+              { id: 'it-ITA', label: '🇮🇹 Italian Italy' },
+              { id: 'es-INT', label: '🌎 Spanish International' },
+              { id: 'other', label: 'Senza mercato' },
             ] as { id: Market; label: string }[]
           ).map((m) => (
             <button
@@ -338,6 +342,7 @@ export default function PazientiPage() {
                   'Email',
                   'Origine',
                   'Tier',
+                  'Mercato',
                   'Paese',
                   'Lesione',
                   'Terapista',
@@ -453,6 +458,27 @@ export default function PazientiPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>
+                      {r.marketplace_code ? (
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            background:
+                              r.marketplace_code === 'it-ITA' ? '#fef3c7' : '#dbeafe',
+                            color:
+                              r.marketplace_code === 'it-ITA' ? '#92400e' : '#1e40af',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            borderRadius: 99,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {r.marketplace_code === 'it-ITA' ? '🇮🇹 it-ITA' : '🌎 es-INT'}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#cbd5e1', fontSize: 11 }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>
                       <span style={{ fontSize: 16 }}>{flagFor(r.country_code)}</span>{' '}
                       <span style={{ fontSize: 11 }}>{r.country_code || '—'}</span>
                     </td>
@@ -539,7 +565,7 @@ export default function PazientiPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     style={{
                       padding: 40,
                       textAlign: 'center',

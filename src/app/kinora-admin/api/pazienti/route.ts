@@ -17,6 +17,11 @@ interface PatientRow {
   gender: string | null;
   city: string | null;
   country_code: string | null;
+  // The Resilients marketplace code ('it-ITA' / 'es-INT'), or null when
+  // the patient hasn't been assigned to a marketplace (a handful of
+  // legacy rows in Resilients lack this), or for self-signup users.
+  marketplace_code: string | null;
+  marketplace_name: string | null;
   lesion_type: string | null;
   affected_side: string | null;
   lesion_date: string | null;
@@ -80,7 +85,12 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const search = (url.searchParams.get('q') || '').trim();
     const activeOnly = url.searchParams.get('activeOnly') !== 'false';
-    const market = (url.searchParams.get('market') || 'all').toLowerCase(); // all|it|es|other
+    // market matches core_marketplace.code:
+    //  'all'    → no filter
+    //  'it-ITA' → Italian Italy
+    //  'es-INT' → Spanish International
+    //  'other'  → no marketplace assigned in Resilients
+    const market = (url.searchParams.get('market') || 'all');
     const limit = Math.min(2000, parseInt(url.searchParams.get('limit') || '1000', 10));
 
     const c = await strDbClient();
@@ -110,6 +120,19 @@ export async function GET(request: NextRequest) {
           therapist_id
         FROM assignment_assignedtherapist
         ORDER BY patient_id, modified_at DESC NULLS LAST
+      ),
+      patient_marketplace AS (
+        -- A patient (user_patient.customer_id) is linked to a marketplace
+        -- via user_user_marketplaces (user_id = customer_id). Some legacy
+        -- rows have no link, so we LEFT-join below.
+        SELECT DISTINCT ON (uum.user_id)
+          uum.user_id AS customer_id,
+          cm.id AS marketplace_id,
+          cm.code AS marketplace_code,
+          cm.name AS marketplace_name
+        FROM user_user_marketplaces uum
+        JOIN core_marketplace cm ON cm.id = uum.marketplace_id
+        ORDER BY uum.user_id, uum.id ASC
       )
       SELECT
         p.id,
@@ -119,6 +142,8 @@ export async function GET(request: NextRequest) {
         p.gender,
         p.city,
         cc.code AS country_code,
+        pm.marketplace_code,
+        pm.marketplace_name,
         p.lesion_type,
         p.affected_side,
         p.lesion_date::text AS lesion_date,
@@ -133,6 +158,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN latest_paid lp ON lp.customer_id = p.customer_id
       LEFT JOIN assigned a ON a.patient_id = p.id
       LEFT JOIN user_user tu ON tu.id = a.therapist_id
+      LEFT JOIN patient_marketplace pm ON pm.customer_id = p.customer_id
       WHERE ($1::text = '' OR
              p.first_name ILIKE $2 OR
              p.last_name ILIKE $2 OR
@@ -146,17 +172,8 @@ export async function GET(request: NextRequest) {
         )
         AND (
           $5::text = 'all'
-          OR ($5::text = 'it' AND cc.code = 'IT')
-          OR ($5::text = 'es' AND cc.code IN (
-            'ES','MX','AR','CL','CO','PE','VE','EC','BO','UY','PA','HN',
-            'GT','NI','CR','DO','CU','PR','SV','PY'
-          ))
-          OR ($5::text = 'other' AND (
-            cc.code IS NULL OR cc.code NOT IN (
-              'IT','ES','MX','AR','CL','CO','PE','VE','EC','BO','UY','PA',
-              'HN','GT','NI','CR','DO','CU','PR','SV','PY'
-            )
-          ))
+          OR ($5::text = 'other' AND pm.marketplace_code IS NULL)
+          OR pm.marketplace_code = $5::text
         )
       ORDER BY p.last_name ASC NULLS LAST, p.first_name ASC NULLS LAST
       LIMIT $4
@@ -216,6 +233,8 @@ export async function GET(request: NextRequest) {
           gender: (typeof meta.sex === 'string' ? meta.sex : null) ?? null,
           city: null,
           country_code: null,
+          marketplace_code: null,
+          marketplace_name: null,
           lesion_type: null,
           affected_side: null,
           lesion_date: null,
