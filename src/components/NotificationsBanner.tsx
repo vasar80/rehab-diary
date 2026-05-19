@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { getAccessToken } from '@/lib/supabase/client';
 import { isPushSupported, getPushPermission, subscribeToPush } from '@/lib/push-client';
 
 const DISMISS_KEY = 'kinora-push-banner-dismissed-at';
@@ -43,8 +43,7 @@ export default function NotificationsBanner() {
     setActivating(true);
     setError('');
     try {
-      const fb = firebaseAuth.currentUser;
-      const idToken = fb ? await fb.getIdToken() : '';
+      const idToken = await getAccessToken().catch(() => '');
       if (!idToken) {
         setError('Devi essere loggato per attivare le notifiche');
         return;

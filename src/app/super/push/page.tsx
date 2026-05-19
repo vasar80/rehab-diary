@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Bell, Send, AlertCircle, Check } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { getAccessToken } from '@/lib/supabase/client';
 import Wordmark from '@/components/Wordmark';
 
 interface Patient { id: string; name?: string; email?: string }
@@ -27,9 +27,7 @@ export default function PushAdminPage() {
   const [url, setUrl] = useState('/');
 
   async function getToken(): Promise<string> {
-    const fb = firebaseAuth.currentUser;
-    if (!fb) throw new Error('Non autenticato');
-    return await fb.getIdToken();
+    return await getAccessToken();
   }
 
   const loadUsers = useCallback(async () => {

@@ -21,7 +21,7 @@ import ChatInputBar from '@/components/ChatInputBar';
 import Wordmark from '@/components/Wordmark';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { getAccessToken } from '@/lib/supabase/client';
 
 export default function ProfiloPage() {
   const router = useRouter();
@@ -99,9 +99,8 @@ export default function ProfiloPage() {
     setActionError('');
     setExporting(true);
     try {
-      const fb = firebaseAuth.currentUser;
-      if (!fb) throw new Error('Devi accedere con un account reale per esportare i dati.');
-      const token = await fb.getIdToken();
+      const token = await getAccessToken().catch(() => null);
+      if (!token) throw new Error('Devi accedere con un account reale per esportare i dati.');
       const res = await fetch('/api/me/export', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -131,9 +130,8 @@ export default function ProfiloPage() {
     setActionError('');
     setDeleting(true);
     try {
-      const fb = firebaseAuth.currentUser;
-      if (!fb) throw new Error('Devi accedere con un account reale per cancellare i dati.');
-      const token = await fb.getIdToken();
+      const token = await getAccessToken().catch(() => null);
+      if (!token) throw new Error('Devi accedere con un account reale per cancellare i dati.');
       const res = await fetch('/api/me/delete', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

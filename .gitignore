@@ -44,3 +44,8 @@ firebase-debug.log
 *.tsbuildinfo
 next-env.d.ts
 raw-animations/
+
+# Local debugging scripts
+db-explore*.mjs
+db-nossl.mjs
+test-supabase.mjs

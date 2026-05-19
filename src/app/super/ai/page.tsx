@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Sparkles, Save, AlertCircle, Check, RotateCcw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { getAccessToken } from '@/lib/supabase/client';
 import Wordmark from '@/components/Wordmark';
 import { DEFAULT_BASE_PROMPT } from '@/lib/system-prompt';
 
@@ -21,9 +21,7 @@ export default function AiConfigPage() {
   const [hasCustom, setHasCustom] = useState(false);
 
   async function getToken(): Promise<string> {
-    const fb = firebaseAuth.currentUser;
-    if (!fb) throw new Error('Non autenticato');
-    return await fb.getIdToken();
+    return await getAccessToken();
   }
 
   const load = useCallback(async () => {

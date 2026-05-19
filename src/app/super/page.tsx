@@ -19,7 +19,7 @@ import {
   Bell,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { getAccessToken } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/auth-context';
 
 interface Patient {
@@ -62,9 +62,7 @@ export default function SuperAdminPage() {
   const [pwError, setPwError] = useState('');
 
   async function getToken(): Promise<string> {
-    const fb = firebaseAuth.currentUser;
-    if (!fb) throw new Error('Non autenticato');
-    return await fb.getIdToken();
+    return await getAccessToken();
   }
 
   const load = useCallback(async () => {

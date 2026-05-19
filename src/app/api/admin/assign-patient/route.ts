@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb, verifyCallerIsSuperAdmin } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyCallerIsSuperAdmin } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {

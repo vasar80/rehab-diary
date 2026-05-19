@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyCallerFromAuthHeader } from '@/lib/supabase/server';
 
 // GDPR art. 15 + art. 20: right of access + right to data portability.
 // Returns every piece of personal data we hold about the caller as JSON.
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing authorization' }, { status: 401 });
-    }
-    const token = authHeader.substring('Bearer '.length);
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
-    const email = decoded.email || null;
+    const { uid, email } = await verifyCallerFromAuthHeader(
+      request.headers.get('authorization')
+    );
 
     const db = getAdminDb();
 

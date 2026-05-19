@@ -1,15 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import {
-  User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  updateProfile,
-} from 'firebase/auth';
-import { auth } from './firebase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from './supabase/client';
 import { getPatient, savePatient, saveTherapist } from './firestore';
 import { UserRole, deriveRoleFromEmail } from './types';
 
@@ -24,15 +17,24 @@ interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
-  firebaseUser: User | null;
+  supabaseUser: SupabaseUser | null;
+  /** @deprecated kept for backwards compatibility with call sites that referenced firebaseUser */
+  firebaseUser: SupabaseUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: UserRole, sex?: 'M' | 'F') => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    sex?: 'M' | 'F'
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  supabaseUser: null,
   firebaseUser: null,
   loading: true,
   login: async () => {},
@@ -40,55 +42,109 @@ const AuthContext = createContext<AuthContextType>({
   logout: async () => {},
 });
 
+function deriveDisplayName(supaUser: SupabaseUser, fallback?: string): string {
+  const meta = supaUser.user_metadata || {};
+  return (
+    (typeof meta.name === 'string' && meta.name) ||
+    (typeof meta.full_name === 'string' && meta.full_name) ||
+    fallback ||
+    supaUser.email?.split('@')[0] ||
+    ''
+  );
+}
+
+async function hydrateAuthUser(supaUser: SupabaseUser): Promise<AuthUser> {
+  const email = supaUser.email || '';
+  const role = deriveRoleFromEmail(email);
+  let sex: 'M' | 'F' | undefined;
+
+  if (role === 'patient') {
+    try {
+      const patient = await getPatient(supaUser.id);
+      sex = patient?.sex;
+    } catch {
+      // patient profile may not yet exist — fine
+    }
+  }
+
+  return {
+    uid: supaUser.id,
+    email,
+    displayName: deriveDisplayName(supaUser),
+    role,
+    sex,
+    patientId: role === 'patient' ? supaUser.id : undefined,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        const role: UserRole = deriveRoleFromEmail(fbUser.email || '');
-        let sex: 'M' | 'F' | undefined;
-        if (role === 'patient') {
-          try {
-            const patient = await getPatient(fbUser.uid);
-            sex = patient?.sex;
-          } catch {}
-        }
-        setUser({
-          uid: fbUser.uid,
-          email: fbUser.email || '',
-          displayName: fbUser.displayName || fbUser.email?.split('@')[0] || '',
-          role,
-          sex,
-          patientId: role === 'patient' ? fbUser.uid : undefined,
-        });
-      } else {
-        setUser(null);
-      }
+    let mounted = true;
+
+    // 1) Initial session on mount
+    supabase()
+      .auth.getSession()
+      .then(async ({ data }) => {
+        if (!mounted) return;
+        const s = data.session?.user ?? null;
+        setSupabaseUser(s);
+        setUser(s ? await hydrateAuthUser(s) : null);
+        setLoading(false);
+      });
+
+    // 2) Subscribe to auth state changes (login, logout, token refresh)
+    const { data: sub } = supabase().auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      const s = session?.user ?? null;
+      setSupabaseUser(s);
+      setUser(s ? await hydrateAuthUser(s) : null);
       setLoading(false);
     });
-    return unsubscribe;
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   async function login(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    const { error } = await supabase().auth.signInWithPassword({ email, password });
+    if (error) throw error;
   }
 
-  async function register(email: string, password: string, name: string, role: UserRole, sex?: 'M' | 'F') {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
+  async function register(
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole,
+    sex?: 'M' | 'F'
+  ) {
+    const { data, error } = await supabase().auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, role, sex }, // stored on auth.users.user_metadata
+      },
+    });
+    if (error) throw error;
+    if (!data.user) throw new Error('Registrazione non riuscita.');
 
-    const effectiveRole: UserRole = deriveRoleFromEmail(email) === 'super_admin' ? 'super_admin' : role;
+    const effectiveRole: UserRole =
+      deriveRoleFromEmail(email) === 'super_admin' ? 'super_admin' : role;
 
+    // For now we still mirror the profile into Firestore so existing diary /
+    // contract / video code keeps working. We'll migrate this to a Supabase
+    // `kinora.profile` table in the next step.
     try {
       await Promise.race([
         (async () => {
           if (effectiveRole === 'patient') {
             await savePatient({
-              id: cred.user.uid,
+              id: data.user!.id,
               name,
               email,
               sex,
@@ -97,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           } else if (effectiveRole === 'admin') {
             await saveTherapist({
-              id: cred.user.uid,
+              id: data.user!.id,
               name,
               email,
               sex,
@@ -105,28 +161,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
         })(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 5000)),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Firestore timeout')), 5000)
+        ),
       ]);
     } catch {
       console.warn('Could not save profile to Firestore, will retry later');
     }
+
     setUser({
-      uid: cred.user.uid,
+      uid: data.user.id,
       email,
       displayName: name,
       role: effectiveRole,
       sex,
-      patientId: effectiveRole === 'patient' ? cred.user.uid : undefined,
+      patientId: effectiveRole === 'patient' ? data.user.id : undefined,
     });
   }
 
   async function logout() {
-    await signOut(auth);
+    await supabase().auth.signOut();
     setUser(null);
+    setSupabaseUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        supabaseUser,
+        firebaseUser: supabaseUser, // alias for old call sites
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

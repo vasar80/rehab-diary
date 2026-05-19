@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, verifyCallerIsSuperAdmin } from '@/lib/firebase-admin';
+import { verifyCallerIsSuperAdmin, createSupabaseAdminClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +11,8 @@ export async function POST(request: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
-    await getAdminAuth().updateUser(uid, { password });
+    const { error } = await createSupabaseAdminClient().auth.admin.updateUserById(uid, { password });
+    if (error) throw error;
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Update failed';

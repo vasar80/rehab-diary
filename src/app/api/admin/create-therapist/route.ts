@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminDb, verifyCallerIsSuperAdmin } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyCallerIsSuperAdmin, createSupabaseAdminClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,17 +14,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    const auth = getAdminAuth();
+    const supaAdmin = createSupabaseAdminClient();
     const db = getAdminDb();
 
-    const userRecord = await auth.createUser({
+    const { data, error } = await supaAdmin.auth.admin.createUser({
       email,
       password,
-      displayName: name,
-      emailVerified: false,
+      email_confirm: true, // therapists are provisioned manually, no confirmation flow needed
+      user_metadata: { name, role: 'admin', sex: sex || undefined },
     });
+    if (error) throw error;
+    if (!data.user) throw new Error('User not created');
 
-    await db.collection('therapists').doc(userRecord.uid).set({
+    const uid = data.user.id;
+
+    await db.collection('therapists').doc(uid).set({
       name,
       email,
       sex: sex || null,
@@ -31,11 +36,15 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     });
 
-    return NextResponse.json({ uid: userRecord.uid, email, name });
+    return NextResponse.json({ uid, email, name });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Create failed';
-    const status = message.includes('authoriz') ? 403 :
-      message.includes('email-already-exists') ? 409 : 500;
+    const lower = message.toLowerCase();
+    const status = lower.includes('authoriz')
+      ? 403
+      : lower.includes('already') || lower.includes('exists')
+        ? 409
+        : 500;
     return NextResponse.json({ error: message }, { status });
   }
 }

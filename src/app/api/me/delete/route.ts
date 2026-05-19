@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyCallerFromAuthHeader, createSupabaseAdminClient } from '@/lib/supabase/server';
 
 // GDPR art. 17: right to erasure ("right to be forgotten").
-// Deletes all Firestore data tied to the caller and disables the Firebase Auth user.
+// Deletes all Firestore data tied to the caller and disables the Supabase Auth user.
 // The Auth record itself is preserved for ~30 days so audit logs survive an accidental
 // re-registration with the same email; a scheduled job purges it after the retention window.
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing authorization' }, { status: 401 });
-    }
-    const token = authHeader.substring('Bearer '.length);
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
+    const { uid } = await verifyCallerFromAuthHeader(request.headers.get('authorization'));
 
     const { confirm } = await request.json().catch(() => ({}));
     if (confirm !== 'ELIMINA') {
@@ -58,10 +53,13 @@ export async function POST(request: NextRequest) {
     if (patientSnap.exists) await db.collection('patients').doc(uid).delete();
     if (therapistSnap.exists) await db.collection('therapists').doc(uid).delete();
 
-    // Disable rather than fully delete the Auth account so the user can never accidentally
-    // sign back in to "their" account before the retention window expires.
+    // Ban the Supabase Auth account so the user can never accidentally sign
+    // back in to "their" account before the retention window expires. A
+    // scheduled job removes the auth record entirely after 30 days.
     try {
-      await getAdminAuth().updateUser(uid, { disabled: true });
+      await createSupabaseAdminClient().auth.admin.updateUserById(uid, {
+        ban_duration: '8760h', // ~1 year, well past our 30-day retention window
+      });
     } catch {}
 
     return NextResponse.json({

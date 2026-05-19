@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { verifyCallerFromAuthHeader } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Missing authorization' }, { status: 401 });
-    }
-    const token = authHeader.substring('Bearer '.length);
-    const decoded = await getAdminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
+    const { uid } = await verifyCallerFromAuthHeader(request.headers.get('authorization'));
 
     const body = await request.json();
     const { subscription } = body;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Heart, ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { deriveRoleFromEmail } from '@/lib/types';
 
 export default function LoginPage() {
@@ -36,13 +36,17 @@ export default function LoginPage() {
       } else {
         await login(email, password);
       }
-      const fbUser = firebaseAuth.currentUser;
+      const { data: { user: supaUser } } = await supabase().auth.getUser();
       const effectiveRole = deriveRoleFromEmail(email);
       const finalRole = effectiveRole === 'super_admin' ? 'super_admin' : mode;
+      const displayName =
+        (typeof supaUser?.user_metadata?.name === 'string' && supaUser.user_metadata.name) ||
+        name ||
+        email.split('@')[0];
       setUser({
-        id: fbUser?.uid || email,
+        id: supaUser?.id || email,
         role: finalRole,
-        name: fbUser?.displayName || name || email.split('@')[0],
+        name: displayName,
         email,
         sex: mode === 'patient' ? sex : undefined,
         isDemo: false,
@@ -52,14 +56,25 @@ export default function LoginPage() {
       else router.push('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Errore sconosciuto';
-      if (msg.includes('user-not-found') || msg.includes('invalid-credential')) {
-        setError('Email o password non corretti');
-      } else if (msg.includes('email-already-in-use')) {
-        setError('Questa email è già registrata');
-      } else if (msg.includes('weak-password')) {
-        setError('La password deve avere almeno 6 caratteri');
-      } else if (msg.includes('invalid-email')) {
-        setError('Email non valida');
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes('invalid login credentials') ||
+        lower.includes('user-not-found') ||
+        lower.includes('invalid-credential')
+      ) {
+        setError('Email o password non corretti.');
+      } else if (
+        lower.includes('user already registered') ||
+        lower.includes('email-already-in-use') ||
+        lower.includes('already exists')
+      ) {
+        setError('Questa email è già registrata.');
+      } else if (lower.includes('password') && (lower.includes('short') || lower.includes('weak'))) {
+        setError('La password deve avere almeno 6 caratteri.');
+      } else if (lower.includes('invalid') && lower.includes('email')) {
+        setError('Email non valida.');
+      } else if (lower.includes('email not confirmed')) {
+        setError('Devi prima confermare la tua email. Controlla la posta.');
       } else {
         setError(msg);
       }

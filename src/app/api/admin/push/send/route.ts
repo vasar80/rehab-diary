@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCallerIsSuperAdmin } from '@/lib/firebase-admin';
+import { verifyCallerIsSuperAdmin } from '@/lib/supabase/server';
 import { sendPushToUser, sendPushToAll } from '@/lib/push-server';
 
 export async function POST(request: NextRequest) {
