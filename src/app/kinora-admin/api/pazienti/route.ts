@@ -24,7 +24,28 @@ let cachedClient: Client | null = null;
 async function strDbClient(): Promise<Client> {
   if (cachedClient) return cachedClient;
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL non configurata');
+  if (!url) {
+    throw new Error('DATABASE_URL non configurata su questo environment');
+  }
+  // Quick sanity-check on the env var shape — gives us useful diagnostics
+  // in Vercel logs when the value is a placeholder or the legacy
+  // `.rds.amazonaws.com:`-suffixed version, without ever revealing the
+  // password.
+  const looksValid =
+    url.startsWith('postgresql://') &&
+    url.includes('@') &&
+    !url.includes('METTI_') &&
+    !url.includes('INCOLLA_') &&
+    !url.includes('.rds.amazonaws.com:');
+  if (!looksValid) {
+    const prefix = url.slice(0, 13); // "postgresql://"
+    const after = url.substring(13);
+    const atIdx = after.indexOf('@');
+    const hostPart = atIdx >= 0 ? after.substring(atIdx + 1) : after;
+    throw new Error(
+      `DATABASE_URL malformata. prefisso="${prefix}" lunghezza=${url.length} host="${hostPart.slice(0, 60)}"`
+    );
+  }
   const c = new Client({
     connectionString: url.replace('?sslmode=require', ''),
     ssl: false, // Resilients RDS doesn't accept SSL on public endpoint

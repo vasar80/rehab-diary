@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  AppWindow,
   Users,
   BookOpen,
   Video,
@@ -18,6 +19,7 @@ import {
   Settings,
   Shield,
   Stethoscope,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -28,19 +30,42 @@ interface NavNode {
   href: string;
   icon: LucideIcon;
   label: string;
+  children?: NavNode[];
 }
 
 const NAV_TREE: NavNode[] = [
   { href: '/kinora-admin', icon: LayoutDashboard, label: 'Overview' },
-  { href: '/kinora-admin/pazienti', icon: Stethoscope, label: 'Pazienti' },
-  { href: '/kinora-admin/staff', icon: Users, label: 'Staff' },
-  { href: '/kinora-admin/accessi', icon: Shield, label: 'Accessi applicativi' },
-  { href: '/kinora-admin/diari', icon: BookOpen, label: 'Diari' },
-  { href: '/kinora-admin/video', icon: Video, label: 'Video' },
-  { href: '/kinora-admin/contratti', icon: FileText, label: 'Contratti' },
-  { href: '/kinora-admin/agents', icon: Bot, label: 'Agents AI' },
-  { href: '/kinora-admin/configurazione', icon: Settings, label: 'Configurazione' },
+  {
+    href: '/kinora-admin/applicativi',
+    icon: AppWindow,
+    label: 'Applicativi',
+    children: [
+      { href: '/kinora-admin/pazienti', icon: Stethoscope, label: 'Pazienti' },
+      { href: '/kinora-admin/accessi', icon: Shield, label: 'Accessi applicativi' },
+      { href: '/kinora-admin/diari', icon: BookOpen, label: 'Diari' },
+      { href: '/kinora-admin/video', icon: Video, label: 'Video' },
+      { href: '/kinora-admin/contratti', icon: FileText, label: 'Contratti' },
+      { href: '/kinora-admin/agents', icon: Bot, label: 'Agents AI' },
+      { href: '/kinora-admin/configurazione', icon: Settings, label: 'Configurazione' },
+    ],
+  },
 ];
+
+/**
+ * Returns true when the given node's branch is "active" — i.e. the
+ * current pathname matches the node href, or any of its descendants.
+ */
+function isOnPath(pathname: string, node: NavNode): boolean {
+  if (pathname === node.href) return true;
+  if (node.children) {
+    return node.children.some((c) => isOnPath(pathname, c));
+  }
+  // Match descendants of intermediate nodes like /kinora-admin/<app>/*
+  if (node.href !== '/kinora-admin' && pathname.startsWith(node.href + '/')) {
+    return true;
+  }
+  return false;
+}
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -58,7 +83,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Block body scroll when mobile drawer open
   useEffect(() => {
     if (!isMobile) return;
     if (!drawerOpen) return;
@@ -110,6 +134,62 @@ export function AdminShell({ children }: { children: ReactNode }) {
   async function handleLogout() {
     await supabase().auth.signOut();
     router.push('/login');
+  }
+
+  function renderNavNode(node: NavNode, depth = 0): ReactNode {
+    const Icon = node.icon;
+    const active = pathname === node.href;
+    const branchActive = isOnPath(pathname, node);
+    const showChildren = !!node.children && branchActive;
+
+    return (
+      <div key={node.href}>
+        <Link
+          href={node.href}
+          onClick={() => isMobile && setDrawerOpen(false)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: depth === 0 ? '10px 12px' : '8px 12px 8px 36px',
+            borderRadius: 9,
+            color: active ? '#f1f5f9' : '#94a3b8',
+            background: active ? 'rgba(99,102,241,0.18)' : 'transparent',
+            textDecoration: 'none',
+            fontSize: depth === 0 ? 13 : 12,
+            fontWeight: active ? 600 : 500,
+            transition: 'background 0.12s, color 0.12s',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            marginBottom: 1,
+          }}
+        >
+          <Icon size={depth === 0 ? 17 : 15} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <span
+            style={{
+              opacity: showSidebarLabels ? 1 : 0,
+              transition: 'opacity 0.12s',
+              flex: 1,
+            }}
+          >
+            {node.label}
+          </span>
+          {node.children && showSidebarLabels && (
+            <ChevronRight
+              size={13}
+              strokeWidth={2.5}
+              style={{
+                transform: showChildren ? 'rotate(90deg)' : 'rotate(0)',
+                transition: 'transform 0.15s',
+                color: '#475569',
+                flexShrink: 0,
+              }}
+            />
+          )}
+        </Link>
+        {showChildren && node.children?.map((child) => renderNavNode(child, depth + 1))}
+      </div>
+    );
   }
 
   return (
@@ -166,7 +246,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
               }
         }
       >
-        {/* Brand */}
         <div
           style={{
             padding: '22px 20px 18px',
@@ -241,7 +320,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           )}
         </div>
 
-        {/* User */}
         <div
           style={{
             padding: '16px 16px',
@@ -305,7 +383,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Nav */}
         <nav
           style={{
             flex: 1,
@@ -316,47 +393,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
             gap: 2,
           }}
         >
-          {NAV_TREE.map((node) => {
-            const Icon = node.icon;
-            const active =
-              pathname === node.href ||
-              (node.href !== '/kinora-admin' && pathname.startsWith(node.href));
-            return (
-              <Link
-                key={node.href}
-                href={node.href}
-                onClick={() => isMobile && setDrawerOpen(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 12px',
-                  borderRadius: 9,
-                  color: active ? '#f1f5f9' : '#94a3b8',
-                  background: active ? 'rgba(99,102,241,0.18)' : 'transparent',
-                  textDecoration: 'none',
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  transition: 'background 0.12s, color 0.12s',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                }}
-              >
-                <Icon size={17} strokeWidth={2} style={{ flexShrink: 0 }} />
-                <span
-                  style={{
-                    opacity: showSidebarLabels ? 1 : 0,
-                    transition: 'opacity 0.12s',
-                  }}
-                >
-                  {node.label}
-                </span>
-              </Link>
-            );
-          })}
+          {NAV_TREE.map((node) => renderNavNode(node))}
         </nav>
 
-        {/* Logout */}
         <div
           style={{
             padding: '12px 8px 16px',
@@ -394,7 +433,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Main */}
       <div
         style={{
           flex: 1,
@@ -404,7 +442,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           minWidth: 0,
         }}
       >
-        {/* Top bar */}
         <header
           style={{
             height: 56,
@@ -459,7 +496,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </button>
         </header>
 
-        {/* Page content */}
         <main
           style={{
             flex: 1,

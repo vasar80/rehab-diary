@@ -1,11 +1,18 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { Users, BookOpen, Video, FileText, Bot, Settings, Bell, Shield, Stethoscope } from 'lucide-react';
-import { AppChip } from './_components/AppChip';
+import { KINORA_APPS, recordUsage, getRecent, type AppDef } from './_lib/apps';
 
 export default function KinoraAdminOverview() {
   const { supabaseUser } = useAuth();
+  const [recent, setRecent] = useState<string[]>([]);
+
+  useEffect(() => {
+    setRecent(getRecent());
+  }, []);
+
   const name =
     ((supabaseUser?.user_metadata as Record<string, unknown> | null)?.name as string) ||
     supabaseUser?.email?.split('@')[0] ||
@@ -14,6 +21,11 @@ export default function KinoraAdminOverview() {
   const hour = new Date().getHours();
   const greet =
     hour < 12 ? 'Buongiorno' : hour < 18 ? 'Buon pomeriggio' : 'Buonasera';
+
+  const recentApps: AppDef[] = recent
+    .map((id) => KINORA_APPS.find((a) => a.id === id))
+    .filter((a): a is AppDef => !!a);
+  const showRecent = recentApps.length > 0 ? recentApps : KINORA_APPS.slice(0, 4);
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto' }}>
@@ -30,17 +42,17 @@ export default function KinoraAdminOverview() {
           {greet}, {firstName}
         </h1>
         <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>
-          Pannello di amministrazione di Kinora — gestione pazienti, contenuti, agenti AI.
+          Pannello di amministrazione di Kinora.
         </p>
       </header>
 
-      <section style={{ marginBottom: 32 }}>
+      <section>
         <div
           style={{
             display: 'flex',
             alignItems: 'baseline',
             justifyContent: 'space-between',
-            marginBottom: 14,
+            marginBottom: 12,
           }}
         >
           <h2
@@ -53,111 +65,95 @@ export default function KinoraAdminOverview() {
               textTransform: 'uppercase',
             }}
           >
-            Applicativi
+            {recentApps.length > 0 ? 'Usati di recente' : 'Inizia da qui'}
           </h2>
+          <Link
+            href="/kinora-admin/applicativi"
+            style={{
+              padding: '4px 10px',
+              background: '#eef2ff',
+              color: '#6366f1',
+              fontSize: 11,
+              fontWeight: 600,
+              borderRadius: 99,
+              textDecoration: 'none',
+            }}
+          >
+            Vedi tutti →
+          </Link>
         </div>
 
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: 14,
+            display: 'flex',
+            gap: 10,
+            overflowX: 'auto',
+            paddingBottom: 4,
+            scrollSnapType: 'x mandatory',
           }}
         >
-          <AppChip
-            href="/kinora-admin/pazienti"
-            Icon={Stethoscope}
-            label="Pazienti"
-            sublabel="Pazienti veri dal gestionale, attivi con subscription"
-            gradient="linear-gradient(135deg, #E85A7A 0%, #322A6E 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/staff"
-            Icon={Users}
-            label="Staff"
-            sublabel="Tutti i dipendenti, tutti i mercati"
-            gradient="linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/accessi"
-            Icon={Shield}
-            label="Accessi applicativi"
-            sublabel="Chi può vedere cosa dentro Kinora"
-            gradient="linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/diari"
-            Icon={BookOpen}
-            label="Diari"
-            sublabel="Compilazioni quotidiane, filtri per paziente"
-            gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/video"
-            Icon={Video}
-            label="Video"
-            sublabel="Sessioni caricate dai pazienti"
-            gradient="linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/contratti"
-            Icon={FileText}
-            label="Contratti"
-            sublabel="Impegni riabilitativi attivi"
-            gradient="linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/agents"
-            Icon={Bot}
-            label="Agents AI"
-            sublabel="Assistenti AI condivisi con la dashboard"
-            gradient="linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/configurazione"
-            Icon={Settings}
-            label="Configurazione"
-            sublabel="Prompt AI, conoscenza clinica, parametri"
-            gradient="linear-gradient(135deg, #64748b 0%, #334155 100%)"
-          />
-          <AppChip
-            href="/kinora-admin/notifiche"
-            Icon={Bell}
-            label="Notifiche push"
-            sublabel="Invio manuale a un paziente o broadcast"
-            gradient="linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)"
-          />
+          {showRecent.map((app) => {
+            const Icon = app.icon;
+            return (
+              <Link
+                key={app.id}
+                href={app.href}
+                onClick={() => recordUsage(app.id)}
+                style={{
+                  display: 'inline-flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '14px 12px',
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 14,
+                  width: 130,
+                  flexShrink: 0,
+                  scrollSnapAlign: 'start',
+                  textDecoration: 'none',
+                  transition: 'transform 0.12s, box-shadow 0.12s, border-color 0.12s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(15,23,42,0.08)';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 16,
+                    background: app.gradient,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                    boxShadow: '0 6px 16px rgba(15,23,42,0.12)',
+                  }}
+                >
+                  <Icon size={28} strokeWidth={2.2} />
+                </div>
+                <div
+                  style={{
+                    color: '#0f172a',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textAlign: 'center',
+                  }}
+                >
+                  {app.label}
+                </div>
+              </Link>
+            );
+          })}
         </div>
-      </section>
-
-      <section
-        style={{
-          background: '#fff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 14,
-          padding: 24,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: '#475569',
-            margin: 0,
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            marginBottom: 16,
-          }}
-        >
-          Prossimo
-        </h2>
-        <p style={{ color: '#475569', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-          Questo pannello è la <strong>cartella sigillata</strong> del dipartimento Kinora —
-          progettata per essere trasferita un giorno dentro la dashboard aziendale con un
-          semplice <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>cp -r</code>.
-          La grafica replica quella della dashboard così l&apos;integrazione, quando avverrà,
-          sarà visivamente trasparente per chi la usa.
-        </p>
       </section>
     </div>
   );
