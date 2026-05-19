@@ -79,14 +79,20 @@ export async function GET(request: NextRequest) {
     // Pull patients with their latest subscription status and assigned
     // therapist's display name. Active = there exists a subscription
     // history row whose end_date is in the future (or NULL = open-ended).
+    // IMPORTANT: "active" = has the LATEST PAID subscription (NOT CUS_FRE)
+    // and that subscription is open-ended OR ends in the future.
+    // CUS_FRE is a sticky default record auto-created when the patient
+    // signs up in the gestionale (end_date NULL forever), so it
+    // cannot be used as an activity signal — every patient has one.
     const query = `
-      WITH latest_sub AS (
+      WITH latest_paid AS (
         SELECT DISTINCT ON (customer_id)
           customer_id,
           plan,
           end_date,
           start_date
         FROM user_subscriptionhistory
+        WHERE plan != 'CUS_FRE'
         ORDER BY customer_id, start_date DESC NULLS LAST
       ),
       assigned AS (
@@ -111,18 +117,24 @@ export async function GET(request: NextRequest) {
           tu.first_name || ' ' || tu.last_name,
           NULL
         ) AS therapist_name,
-        ls.plan AS subscription_plan,
-        (ls.end_date IS NULL OR ls.end_date > NOW()) AS subscription_active
+        lp.plan AS subscription_plan,
+        (lp.end_date IS NULL OR lp.end_date > NOW()) AS subscription_active
       FROM user_patient p
       LEFT JOIN user_country cc ON cc.id = p.country_id
-      LEFT JOIN latest_sub ls ON ls.customer_id = p.customer_id
+      LEFT JOIN latest_paid lp ON lp.customer_id = p.customer_id
       LEFT JOIN assigned a ON a.patient_id = p.id
       LEFT JOIN user_user tu ON tu.id = a.therapist_id
       WHERE ($1::text = '' OR
              p.first_name ILIKE $2 OR
              p.last_name ILIKE $2 OR
              p.email ILIKE $2)
-        AND ($3::boolean = false OR (ls.end_date IS NULL OR ls.end_date > NOW()))
+        AND (
+          $3::boolean = false
+          OR (
+            lp.customer_id IS NOT NULL
+            AND (lp.end_date IS NULL OR lp.end_date > NOW())
+          )
+        )
         AND (
           $5::text = 'all'
           OR ($5::text = 'it' AND cc.code = 'IT')
