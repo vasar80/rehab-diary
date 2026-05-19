@@ -131,7 +131,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (error) throw error;
-    if (!data.user) throw new Error('Registrazione non riuscita.');
+    // Supabase silently returns user=null (or user with empty identities[]) when
+    // the email is already registered — it's an anti-enumeration safeguard.
+    // Convert this into a clear, actionable error for the user.
+    const identitiesCount = data.user?.identities?.length ?? 0;
+    if (!data.user || identitiesCount === 0) {
+      throw new Error(
+        'Questa email è già registrata su Kinora. Prova ad accedere invece di registrarti.'
+      );
+    }
 
     const effectiveRole: UserRole =
       deriveRoleFromEmail(email) === 'super_admin' ? 'super_admin' : role;
