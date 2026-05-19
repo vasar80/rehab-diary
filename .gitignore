@@ -49,3 +49,5 @@ raw-animations/
 db-explore*.mjs
 db-nossl.mjs
 test-supabase.mjs
+# Generated build info
+src/lib/_generated/

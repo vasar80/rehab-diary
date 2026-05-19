@@ -25,6 +25,7 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase/client';
 import { isStaffEmail, isStaffMetadataRole } from '../_lib/staff-gate';
+import VersionWatcher from '@/components/VersionWatcher';
 
 interface NavNode {
   href: string;
@@ -202,6 +203,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         background: '#f8fafc',
       }}
     >
+      <VersionWatcher endpoint="/api/version/admin" tone="admin" />
       {isMobile && drawerOpen && (
         <div
           aria-hidden
