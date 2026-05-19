@@ -16,6 +16,8 @@ import {
   X,
   Bell,
   Settings,
+  Shield,
+  Stethoscope,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -30,7 +32,9 @@ interface NavNode {
 
 const NAV_TREE: NavNode[] = [
   { href: '/kinora-admin', icon: LayoutDashboard, label: 'Overview' },
-  { href: '/kinora-admin/pazienti', icon: Users, label: 'Pazienti' },
+  { href: '/kinora-admin/pazienti', icon: Stethoscope, label: 'Pazienti' },
+  { href: '/kinora-admin/staff', icon: Users, label: 'Staff' },
+  { href: '/kinora-admin/accessi', icon: Shield, label: 'Accessi applicativi' },
   { href: '/kinora-admin/diari', icon: BookOpen, label: 'Diari' },
   { href: '/kinora-admin/video', icon: Video, label: 'Video' },
   { href: '/kinora-admin/contratti', icon: FileText, label: 'Contratti' },

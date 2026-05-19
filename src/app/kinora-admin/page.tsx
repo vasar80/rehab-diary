@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth-context';
-import { Users, BookOpen, Video, FileText, Bot, Settings, Bell } from 'lucide-react';
+import { Users, BookOpen, Video, FileText, Bot, Settings, Bell, Shield, Stethoscope } from 'lucide-react';
 import { AppChip } from './_components/AppChip';
 
 export default function KinoraAdminOverview() {
@@ -66,10 +66,24 @@ export default function KinoraAdminOverview() {
         >
           <AppChip
             href="/kinora-admin/pazienti"
-            Icon={Users}
+            Icon={Stethoscope}
             label="Pazienti"
-            sublabel="Lista, stato abbonamento, ultima attività"
+            sublabel="Pazienti veri dal gestionale, attivi con subscription"
             gradient="linear-gradient(135deg, #E85A7A 0%, #322A6E 100%)"
+          />
+          <AppChip
+            href="/kinora-admin/staff"
+            Icon={Users}
+            label="Staff"
+            sublabel="Tutti i dipendenti, tutti i mercati"
+            gradient="linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)"
+          />
+          <AppChip
+            href="/kinora-admin/accessi"
+            Icon={Shield}
+            label="Accessi applicativi"
+            sublabel="Chi può vedere cosa dentro Kinora"
+            gradient="linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)"
           />
           <AppChip
             href="/kinora-admin/diari"

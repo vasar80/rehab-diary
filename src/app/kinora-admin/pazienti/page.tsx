@@ -1,29 +1,23 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Search, Users, ShieldOff, Mail } from 'lucide-react';
+import { Loader2, Search, Stethoscope } from 'lucide-react';
 import { getAccessToken } from '@/lib/supabase/client';
 
 interface PatientRow {
-  uid: string;
-  email: string | null;
-  name: string | null;
-  role: string | null;
-  created_at: string;
-  last_sign_in_at: string | null;
-  email_confirmed_at: string | null;
-  banned_until: string | null;
-}
-
-function timeSince(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const ms = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(ms / 86400000);
-  if (days <= 0) return 'oggi';
-  if (days === 1) return 'ieri';
-  if (days < 30) return `${days}g fa`;
-  if (days < 365) return `${Math.floor(days / 30)}m fa`;
-  return `${Math.floor(days / 365)}a fa`;
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  gender: string | null;
+  city: string | null;
+  country_id: number | null;
+  lesion_type: string | null;
+  affected_side: string | null;
+  lesion_date: string | null;
+  therapist_name: string | null;
+  subscription_active: boolean;
+  subscription_plan: string | null;
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -40,15 +34,18 @@ export default function PazientiPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [activeOnly, setActiveOnly] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     (async () => {
       try {
         const token = await getAccessToken();
-        const res = await fetch('/kinora-admin/api/pazienti?perPage=100', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetch(
+          `/kinora-admin/api/pazienti?activeOnly=${activeOnly}&limit=500`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
         if (!res.ok) {
           const e = await res.json().catch(() => ({}));
           throw new Error(e.error || `Errore ${res.status}`);
@@ -64,14 +61,17 @@ export default function PazientiPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [activeOnly]);
 
   const filtered = query
-    ? rows.filter(
-        (r) =>
-          (r.email || '').toLowerCase().includes(query.toLowerCase()) ||
-          (r.name || '').toLowerCase().includes(query.toLowerCase())
-      )
+    ? rows.filter((r) => {
+        const q = query.toLowerCase();
+        return (
+          `${r.first_name} ${r.last_name}`.toLowerCase().includes(q) ||
+          (r.email || '').toLowerCase().includes(q) ||
+          (r.city || '').toLowerCase().includes(q)
+        );
+      })
     : rows;
 
   return (
@@ -89,11 +89,11 @@ export default function PazientiPage() {
             gap: 10,
           }}
         >
-          <Users size={22} strokeWidth={2.2} style={{ color: '#6366f1' }} />
+          <Stethoscope size={22} strokeWidth={2.2} style={{ color: '#E85A7A' }} />
           Pazienti
         </h1>
         <p style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>
-          {rows.length} utenti registrati in Supabase Auth — staff inclusi.
+          {rows.length} pazienti{activeOnly ? ' attivi' : ' totali'} · dal gestionale Resilients
         </p>
       </header>
 
@@ -102,34 +102,62 @@ export default function PazientiPage() {
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          marginBottom: 18,
-          padding: '10px 14px',
-          background: '#fff',
-          border: '1px solid #e2e8f0',
-          borderRadius: 10,
+          marginBottom: 14,
+          flexWrap: 'wrap',
         }}
       >
-        <Search size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cerca per email o nome…"
+        <div
           style={{
-            flex: 1,
-            border: 'none',
-            outline: 'none',
-            fontSize: 14,
-            background: 'transparent',
-            color: '#0f172a',
-            fontFamily: 'inherit',
+            flex: '1 1 280px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
           }}
-        />
-        {query && (
-          <span style={{ color: '#94a3b8', fontSize: 12 }}>
-            {filtered.length} risultati
-          </span>
-        )}
+        >
+          <Search size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cerca per nome, cognome, email, città…"
+            style={{
+              flex: 1,
+              border: 'none',
+              outline: 'none',
+              fontSize: 14,
+              background: 'transparent',
+              color: '#0f172a',
+              fontFamily: 'inherit',
+            }}
+          />
+        </div>
+        <label
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 14px',
+            background: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 10,
+            cursor: 'pointer',
+            fontSize: 13,
+            color: '#475569',
+            fontWeight: 500,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={activeOnly}
+            onChange={(e) => setActiveOnly(e.target.checked)}
+            style={{ accentColor: '#6366f1', cursor: 'pointer' }}
+          />
+          Solo attivi
+        </label>
       </div>
 
       {loading ? (
@@ -145,7 +173,7 @@ export default function PazientiPage() {
           }}
         >
           <Loader2 size={20} className="animate-spin" />
-          <span>Carico utenti…</span>
+          <span>Carico pazienti…</span>
         </div>
       ) : error ? (
         <div
@@ -170,27 +198,11 @@ export default function PazientiPage() {
           }}
         >
           <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              fontSize: 13,
-            }}
+            style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}
           >
             <thead>
-              <tr
-                style={{
-                  background: '#f8fafc',
-                  borderBottom: '1px solid #e2e8f0',
-                }}
-              >
-                {[
-                  'Utente',
-                  'Email',
-                  'Ruolo',
-                  'Iscritto',
-                  'Ultimo login',
-                  'Stato',
-                ].map((h) => (
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['Paziente', 'Email', 'Lesione', 'Data evento', 'Terapista', 'Stato'].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -210,24 +222,18 @@ export default function PazientiPage() {
             </thead>
             <tbody>
               {filtered.map((r) => {
-                const isBanned =
-                  r.banned_until && new Date(r.banned_until).getTime() > Date.now();
-                const isConfirmed = !!r.email_confirmed_at;
+                const initials =
+                  `${r.first_name?.[0] ?? ''}${r.last_name?.[0] ?? ''}`.toUpperCase() || '·';
                 return (
-                  <tr
-                    key={r.uid}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9',
-                    }}
-                  >
+                  <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '12px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div
                           style={{
-                            width: 32,
-                            height: 32,
+                            width: 34,
+                            height: 34,
                             borderRadius: '50%',
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            background: 'linear-gradient(135deg, #E85A7A 0%, #6B5DA8 100%)',
                             color: '#fff',
                             fontSize: 12,
                             fontWeight: 700,
@@ -237,7 +243,7 @@ export default function PazientiPage() {
                             flexShrink: 0,
                           }}
                         >
-                          {(r.name || r.email || '?')[0].toUpperCase()}
+                          {initials}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <div
@@ -245,81 +251,33 @@ export default function PazientiPage() {
                               color: '#0f172a',
                               fontWeight: 600,
                               fontSize: 13,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: 200,
                             }}
                           >
-                            {r.name || '—'}
+                            {r.first_name} {r.last_name}
                           </div>
-                          <div
-                            style={{
-                              color: '#94a3b8',
-                              fontSize: 11,
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            {r.uid.slice(0, 8)}…
+                          <div style={{ color: '#94a3b8', fontSize: 11 }}>
+                            {r.city || '—'} · {r.gender || '—'}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px 14px', color: '#475569' }}>{r.email}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      {r.role ? (
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            background: r.role === 'admin' ? '#ddd6fe' : '#dbeafe',
-                            color: r.role === 'admin' ? '#5b21b6' : '#1e40af',
-                            fontSize: 11,
-                            fontWeight: 600,
-                            borderRadius: 99,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                          }}
-                        >
-                          {r.role}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#cbd5e1' }}>—</span>
+                    <td style={{ padding: '12px 14px', color: '#475569', fontSize: 12 }}>
+                      {r.email}
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>
+                      {r.lesion_type || '—'}
+                      {r.affected_side && (
+                        <span style={{ color: '#94a3b8' }}> · {r.affected_side}</span>
                       )}
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>
-                      {formatDate(r.created_at)}
+                      {formatDate(r.lesion_date)}
                     </td>
                     <td style={{ padding: '12px 14px', color: '#475569' }}>
-                      {timeSince(r.last_sign_in_at)}
+                      {r.therapist_name || '—'}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      {isBanned ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            color: '#dc2626',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          <ShieldOff size={12} /> Bannato
-                        </span>
-                      ) : !isConfirmed ? (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            color: '#d97706',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          <Mail size={12} /> Email non confermata
-                        </span>
-                      ) : (
+                      {r.subscription_active ? (
                         <span
                           style={{
                             display: 'inline-flex',
@@ -339,7 +297,21 @@ export default function PazientiPage() {
                             }}
                           />
                           Attivo
+                          {r.subscription_plan && (
+                            <span
+                              style={{
+                                marginLeft: 4,
+                                color: '#94a3b8',
+                                fontWeight: 500,
+                                fontSize: 11,
+                              }}
+                            >
+                              · {r.subscription_plan}
+                            </span>
+                          )}
                         </span>
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: 12 }}>Inattivo</span>
                       )}
                     </td>
                   </tr>
@@ -356,7 +328,7 @@ export default function PazientiPage() {
                       fontSize: 13,
                     }}
                   >
-                    Nessun utente corrisponde alla ricerca.
+                    Nessun paziente corrisponde ai filtri.
                   </td>
                 </tr>
               )}

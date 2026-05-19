@@ -19,9 +19,18 @@ export function getPushPermission(): NotificationPermission | 'unsupported' {
 export async function registerSw(): Promise<ServiceWorkerRegistration | null> {
   if (!isPushSupported()) return null;
   try {
-    const existing = await navigator.serviceWorker.getRegistration('/sw.js');
-    if (existing) return existing;
-    return await navigator.serviceWorker.register('/sw.js');
+    let reg = await navigator.serviceWorker.getRegistration('/sw.js');
+    if (!reg) {
+      reg = await navigator.serviceWorker.register('/sw.js');
+    }
+    // register() resolves as soon as the SW file is fetched, but
+    // pushManager.subscribe() needs an ACTIVE worker, not just an
+    // installed one. Wait for activation before returning.
+    if (!reg.active) {
+      await navigator.serviceWorker.ready;
+      reg = (await navigator.serviceWorker.getRegistration('/sw.js')) || reg;
+    }
+    return reg;
   } catch {
     return null;
   }
