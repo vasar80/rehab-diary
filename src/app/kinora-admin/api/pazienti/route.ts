@@ -10,7 +10,7 @@ interface PatientRow {
   email: string;
   gender: string | null;
   city: string | null;
-  country_id: number | null;
+  country_code: string | null;
   lesion_type: string | null;
   affected_side: string | null;
   lesion_date: string | null;
@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const search = (url.searchParams.get('q') || '').trim();
     const activeOnly = url.searchParams.get('activeOnly') !== 'false';
-    const limit = Math.min(1000, parseInt(url.searchParams.get('limit') || '500', 10));
+    const market = (url.searchParams.get('market') || 'all').toLowerCase(); // all|it|es|other
+    const limit = Math.min(2000, parseInt(url.searchParams.get('limit') || '1000', 10));
 
     const c = await strDbClient();
 
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
         p.email,
         p.gender,
         p.city,
-        p.country_id,
+        cc.code AS country_code,
         p.lesion_type,
         p.affected_side,
         p.lesion_date::text AS lesion_date,
@@ -113,6 +114,7 @@ export async function GET(request: NextRequest) {
         ls.plan AS subscription_plan,
         (ls.end_date IS NULL OR ls.end_date > NOW()) AS subscription_active
       FROM user_patient p
+      LEFT JOIN user_country cc ON cc.id = p.country_id
       LEFT JOIN latest_sub ls ON ls.customer_id = p.customer_id
       LEFT JOIN assigned a ON a.patient_id = p.id
       LEFT JOIN user_user tu ON tu.id = a.therapist_id
@@ -121,6 +123,20 @@ export async function GET(request: NextRequest) {
              p.last_name ILIKE $2 OR
              p.email ILIKE $2)
         AND ($3::boolean = false OR (ls.end_date IS NULL OR ls.end_date > NOW()))
+        AND (
+          $5::text = 'all'
+          OR ($5::text = 'it' AND cc.code = 'IT')
+          OR ($5::text = 'es' AND cc.code IN (
+            'ES','MX','AR','CL','CO','PE','VE','EC','BO','UY','PA','HN',
+            'GT','NI','CR','DO','CU','PR','SV','PY'
+          ))
+          OR ($5::text = 'other' AND (
+            cc.code IS NULL OR cc.code NOT IN (
+              'IT','ES','MX','AR','CL','CO','PE','VE','EC','BO','UY','PA',
+              'HN','GT','NI','CR','DO','CU','PR','SV','PY'
+            )
+          ))
+        )
       ORDER BY p.last_name ASC NULLS LAST, p.first_name ASC NULLS LAST
       LIMIT $4
     `;
@@ -129,6 +145,7 @@ export async function GET(request: NextRequest) {
       `%${search}%`,
       activeOnly,
       limit,
+      market,
     ]);
 
     return NextResponse.json({
