@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
+import { ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase/client';
 import { deriveRoleFromEmail } from '@/lib/types';
+import Wordmark from '@/components/Wordmark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -107,16 +108,8 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
         <div className="w-full max-w-sm">
           <div className="animate-scale-in flex flex-col items-center">
-            <div className="relative">
-              <div className="absolute inset-0 gradient-primary rounded-3xl blur-2xl opacity-50 scale-110" />
-              <div className="relative w-20 h-20 gradient-primary rounded-3xl flex items-center justify-center shadow-2xl glow-primary">
-                <Heart size={36} className="text-white" strokeWidth={2.5} fill="white" />
-              </div>
-            </div>
-            <h1 className="text-text text-4xl font-bold text-center mt-6 tracking-tight">
-              Rehab<span className="gradient-text-primary">Diary</span>
-            </h1>
-            <p className="text-text-secondary text-center mt-2 text-sm max-w-[260px]">
+            <Wordmark text="Kinora" className="text-6xl font-bold tracking-tight" />
+            <p className="text-text-secondary text-center mt-3 text-sm max-w-[280px]">
               Il tuo compagno quotidiano nel percorso di riabilitazione
             </p>
           </div>
