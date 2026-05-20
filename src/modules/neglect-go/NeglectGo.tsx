@@ -49,21 +49,21 @@ const CAPTURE_HOLD_MS = 650;
  * Tutti i panorama DEVONO essere CC0 (public domain) per l'app a
  * pagamento. Fonte preferita: Polyhaven (polyhaven.com), gold-standard.
  *
- * Round 1: kloofendal misty morning — Polyhaven CC0       ✅ cleared
- * Round 2: montagna (PSV demo)                            [TODO: swap]
- * Round 3: osservatorio ALMA (pannellum CC BY-SA)         [TODO: swap]
- * Round 4: Birmingham Museum (pannellum CC BY-SA)         [TODO: swap]
- * Round 5: Cerro Toco (pannellum CC BY-SA)                [TODO: swap]
- * Round 6: Venezia al tramonto — Polyhaven CC0            ✅ cleared
- * Round 7: cielo in fiamme (sunset drammatico) — Polyhaven CC0 ✅ cleared
+ * Round 1: Belfast — sunset drammatico urbano — Polyhaven CC0   ✅ cleared
+ * Round 2: Dikhololo — paesaggio notturno stellato — Polyhaven CC0 ✅ cleared
+ * Round 3: osservatorio ALMA (pannellum CC BY-SA)               [TODO: swap]
+ * Round 4: Birmingham Museum (pannellum CC BY-SA)               [TODO: swap]
+ * Round 5: Cerro Toco (pannellum CC BY-SA)                      [TODO: swap]
+ * Round 6: Venezia al tramonto — Polyhaven CC0                  ✅ cleared
+ * Round 7: cielo in fiamme (sunset drammatico) — Polyhaven CC0  ✅ cleared
  *
  * Per aggiungere round, APPEND solo all'array — NON modificare la logica
  * di gioco. Le etichette dei marker si auto-calibrano via `roundIndex *
  * TOTAL_TARGETS` in `buildMarkers`.
  */
 const PANORAMA_URLS = [
-  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/kloofendal_misty_morning_puresky.jpg',
-  'https://photo-sphere-viewer-data.netlify.app/assets/sphere.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/belfast_sunset_puresky.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/dikhololo_night.jpg',
   'https://pannellum.org/images/alma.jpg',
   'https://pannellum.org/images/bma-1.jpg',
   'https://pannellum.org/images/cerro-toco-0.jpg',

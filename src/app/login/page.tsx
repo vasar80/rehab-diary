@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useAppStore } from '@/lib/store';
@@ -9,8 +9,16 @@ import { supabase } from '@/lib/supabase/client';
 import { deriveRoleFromEmail } from '@/lib/types';
 import Wordmark from '@/components/Wordmark';
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  missing_code: 'Il link di accesso è incompleto. Chiedi un nuovo magic link.',
+  auth_exchange:
+    'Il link di accesso è scaduto o è già stato usato. Genera un nuovo magic link da admin.',
+  auth_callback: 'Errore durante il login automatico. Prova con email e password.',
+};
+
 export default function LoginPage() {
   const router = useRouter();
+  const params = useSearchParams();
   const { login, register } = useAuth();
   const setUser = useAppStore((s) => s.setUser);
   const [mode, setMode] = useState<'patient' | 'admin'>('patient');
@@ -22,6 +30,16 @@ export default function LoginPage() {
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Se la /auth/callback ci rispedisce qui con ?error=... mostriamo il
+  // messaggio adeguato così l'utente capisce cosa è successo invece di
+  // trovarsi una pagina di login muta.
+  useEffect(() => {
+    const code = params?.get('error');
+    if (code && AUTH_ERROR_MESSAGES[code]) {
+      setError(AUTH_ERROR_MESSAGES[code]);
+    }
+  }, [params]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

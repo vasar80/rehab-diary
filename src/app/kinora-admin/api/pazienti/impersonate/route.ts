@@ -121,11 +121,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine redirect URL — use origin of the request so dev/preview/prod
-    // all work without configuration.
+    // Il magic-link di Supabase usa PKCE flow → punta SEMPRE al nostro
+    // callback `/auth/callback` che fa exchangeCodeForSession e poi
+    // redirige all'app vera. `next` è il path interno finale.
     const origin = new URL(request.url).origin;
-    const finalRedirect =
-      redirectTo && redirectTo.startsWith('/') ? `${origin}${redirectTo}` : origin;
+    const safeNext =
+      redirectTo && redirectTo.startsWith('/') ? redirectTo : '/';
+    const finalRedirect = `${origin}/auth/callback?next=${encodeURIComponent(
+      safeNext
+    )}`;
 
     const { data, error } = await admin.auth.admin.generateLink({
       type: 'magiclink',
