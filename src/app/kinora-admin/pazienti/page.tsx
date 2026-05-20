@@ -1,7 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Search, Stethoscope, KeyRound, Check, X, Copy } from 'lucide-react';
+import {
+  Loader2,
+  Search,
+  Stethoscope,
+  KeyRound,
+  Check,
+  X,
+  Copy,
+  Eye,
+  ExternalLink,
+  AlertTriangle,
+} from 'lucide-react';
 import { getAccessToken } from '@/lib/supabase/client';
 
 interface PatientRow {
@@ -77,6 +88,18 @@ export default function PazientiPage() {
     error: string;
   } | null>(null);
 
+  // Modale "Vivi come": genera un magic link per il paziente e lo
+  // mostra con istruzioni per aprirlo in incognito (la sessione admin
+  // sopravvive solo se il link viene aperto in un contesto cookie
+  // separato).
+  const [impersonate, setImpersonate] = useState<{
+    patient: PatientRow;
+    loading: boolean;
+    url: string | null;
+    error: string;
+    copied: boolean;
+  } | null>(null);
+
   useEffect(() => {
     let mounted = true;
     setLoading(true);
@@ -123,6 +146,47 @@ export default function PazientiPage() {
       result: null,
       error: '',
     });
+  }
+
+  async function openImpersonate(patient: PatientRow) {
+    setImpersonate({
+      patient,
+      loading: true,
+      url: null,
+      error: '',
+      copied: false,
+    });
+    try {
+      const token = await getAccessToken();
+      const res = await fetch('/kinora-admin/api/pazienti/impersonate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: patient.email, redirectTo: '/' }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `Errore ${res.status}`);
+      }
+      const data = await res.json();
+      setImpersonate({
+        patient,
+        loading: false,
+        url: data.url,
+        error: '',
+        copied: false,
+      });
+    } catch (e) {
+      setImpersonate({
+        patient,
+        loading: false,
+        url: null,
+        error: e instanceof Error ? e.message : 'Errore',
+        copied: false,
+      });
+    }
   }
 
   async function submitPwd() {
@@ -533,31 +597,62 @@ export default function PazientiPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px 14px' }}>
-                      <button
-                        type="button"
-                        onClick={() => openPwdModal(r)}
-                        disabled={!r.email}
-                        title={!r.email ? 'Manca email nel gestionale' : 'Crea o resetta accesso'}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 5,
-                          padding: '6px 10px',
-                          background: r.email ? '#eef2ff' : '#f1f5f9',
-                          color: r.email ? '#6366f1' : '#94a3b8',
-                          border: '1px solid',
-                          borderColor: r.email ? '#c7d2fe' : '#e2e8f0',
-                          borderRadius: 7,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          cursor: r.email ? 'pointer' : 'not-allowed',
-                          fontFamily: 'inherit',
-                          transition: 'background 0.12s',
-                        }}
-                      >
-                        <KeyRound size={12} strokeWidth={2.4} />
-                        Crea login
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => openPwdModal(r)}
+                          disabled={!r.email}
+                          title={!r.email ? 'Manca email nel gestionale' : 'Crea o resetta accesso'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '6px 10px',
+                            background: r.email ? '#eef2ff' : '#f1f5f9',
+                            color: r.email ? '#6366f1' : '#94a3b8',
+                            border: '1px solid',
+                            borderColor: r.email ? '#c7d2fe' : '#e2e8f0',
+                            borderRadius: 7,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: r.email ? 'pointer' : 'not-allowed',
+                            fontFamily: 'inherit',
+                            transition: 'background 0.12s',
+                          }}
+                        >
+                          <KeyRound size={12} strokeWidth={2.4} />
+                          Crea login
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openImpersonate(r)}
+                          disabled={!r.auth_uid}
+                          title={
+                            !r.auth_uid
+                              ? 'Crea prima il login del paziente'
+                              : 'Vivi l\'app come questo paziente'
+                          }
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            padding: '6px 10px',
+                            background: r.auth_uid ? '#fef3c7' : '#f1f5f9',
+                            color: r.auth_uid ? '#b45309' : '#94a3b8',
+                            border: '1px solid',
+                            borderColor: r.auth_uid ? '#fcd34d' : '#e2e8f0',
+                            borderRadius: 7,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: r.auth_uid ? 'pointer' : 'not-allowed',
+                            fontFamily: 'inherit',
+                            transition: 'background 0.12s',
+                          }}
+                        >
+                          <Eye size={12} strokeWidth={2.4} />
+                          Vivi come
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -590,6 +685,272 @@ export default function PazientiPage() {
           onCopy={copyCredentials}
         />
       )}
+
+      {impersonate && (
+        <ImpersonateModal
+          state={impersonate}
+          setState={setImpersonate}
+        />
+      )}
+    </div>
+  );
+}
+
+function ImpersonateModal({
+  state,
+  setState,
+}: {
+  state: {
+    patient: PatientRow;
+    loading: boolean;
+    url: string | null;
+    error: string;
+    copied: boolean;
+  };
+  setState: (s: typeof state | null) => void;
+}) {
+  const fullName = `${state.patient.first_name} ${state.patient.last_name}`;
+
+  async function copyUrl() {
+    if (!state.url) return;
+    try {
+      await navigator.clipboard.writeText(state.url);
+      setState({ ...state, copied: true });
+      setTimeout(() => {
+        setState({ ...state, copied: false });
+      }, 1800);
+    } catch {
+      /* clipboard may be blocked — user can still long-press the link */
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9000,
+        background: 'rgba(15,23,42,0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+      }}
+      onClick={() => setState(null)}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 'min(480px, 100%)',
+          background: '#ffffff',
+          borderRadius: 12,
+          padding: 22,
+          boxShadow: '0 24px 60px rgba(15,23,42,0.32)',
+          fontFamily: 'inherit',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 6,
+          }}
+        >
+          <Eye size={18} style={{ color: '#b45309' }} />
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#0f172a',
+            }}
+          >
+            Vivi come {fullName}
+          </h2>
+        </div>
+        <p style={{ margin: '4px 0 14px', fontSize: 12.5, color: '#475569' }}>
+          {state.patient.email}
+        </p>
+
+        {state.loading && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '18px 0',
+              color: '#475569',
+              fontSize: 13,
+            }}
+          >
+            <Loader2 size={16} className="animate-spin" />
+            Genero un link di accesso …
+          </div>
+        )}
+
+        {state.error && !state.loading && (
+          <div
+            style={{
+              padding: 12,
+              background: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #fca5a5',
+              borderRadius: 8,
+              fontSize: 12.5,
+            }}
+          >
+            {state.error}
+          </div>
+        )}
+
+        {state.url && !state.loading && (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 9,
+                padding: '11px 13px',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: 8,
+                marginBottom: 14,
+              }}
+            >
+              <AlertTriangle
+                size={15}
+                style={{ color: '#b45309', flexShrink: 0, marginTop: 1 }}
+              />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  color: '#78350f',
+                }}
+              >
+                <strong>Apri il link in una finestra in incognito.</strong> Se
+                lo apri nello stesso browser perderai la tua sessione admin
+                (il login del paziente sovrascrive i cookie).
+              </p>
+            </div>
+
+            <div
+              style={{
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, "JetBrains Mono", monospace',
+                fontSize: 10.5,
+                color: '#334155',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 8,
+                padding: '9px 11px',
+                wordBreak: 'break-all',
+                lineHeight: 1.5,
+                marginBottom: 14,
+                maxHeight: 110,
+                overflow: 'auto',
+              }}
+            >
+              {state.url}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={copyUrl}
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '9px 12px',
+                  background: state.copied ? '#dcfce7' : '#f1f5f9',
+                  color: state.copied ? '#15803d' : '#0f172a',
+                  border: '1px solid',
+                  borderColor: state.copied ? '#86efac' : '#cbd5e1',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'background 0.12s',
+                }}
+              >
+                {state.copied ? (
+                  <>
+                    <Check size={14} />
+                    Copiato
+                  </>
+                ) : (
+                  <>
+                    <Copy size={14} />
+                    Copia link
+                  </>
+                )}
+              </button>
+              <a
+                href={state.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '9px 12px',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <ExternalLink size={14} />
+                Apri in nuova scheda
+              </a>
+            </div>
+            <p
+              style={{
+                margin: '12px 0 0',
+                fontSize: 11,
+                color: '#94a3b8',
+                textAlign: 'center',
+              }}
+            >
+              Il link è valido per 1 ora ed è single-use.
+            </p>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setState(null)}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 28,
+            height: 28,
+            border: 'none',
+            background: 'transparent',
+            color: '#94a3b8',
+            cursor: 'pointer',
+          }}
+          aria-label="Chiudi"
+        >
+          <X size={18} />
+        </button>
+      </div>
     </div>
   );
 }
