@@ -12,6 +12,30 @@ export type ModuleCategory =
   | 'neglect';
 
 /**
+ * Ambiti cognitivi/motori che un modulo allena. Servono per:
+ *  - aggregare i punteggi del paziente per area (es. "attenzione
+ *    spaziale: media negli ultimi 7 esercizi")
+ *  - in futuro: lasciare che la AI suggerisca al paziente quale area
+ *    rinforzare ("vedo che la tua attenzione spaziale è un po' più
+ *    debole — ti va di provare Neglect-Go?")
+ *
+ * Aggiungere nuovi domini qui man mano che servono — il valore è una
+ * stringa stable (lower_snake_case) per allinearsi col formato che
+ * salviamo in kinora.app_score.cognitive_domains.
+ */
+export type CognitiveDomain =
+  | 'attention_spatial'      // attenzione spaziale (neglect, scanning)
+  | 'attention_sustained'    // vigilanza, mantenere il focus nel tempo
+  | 'working_memory'         // memoria di lavoro
+  | 'language_speech'        // logopedia (produzione/comprensione)
+  | 'language_reading'       // lettura
+  | 'motor_planning'         // pianificazione del movimento (sequenze)
+  | 'motor_fine'             // motricità fine (mano, dita)
+  | 'motor_gross'            // motricità grossolana (cammino, postura)
+  | 'visuospatial'           // ragionamento visuo-spaziale
+  | 'executive_function';    // funzioni esecutive (pianificare, inibire)
+
+/**
  * Freemium gating strategies.
  *
  * - sessions: user can do N free sessions then login wall
@@ -64,4 +88,12 @@ export type ModuleManifest = {
   status: 'available' | 'coming-soon';
   /** order in the home/library grid (lower = first) */
   order: number;
+  /**
+   * Ambiti che il modulo allena. Letti dai grafici per area + dalla
+   * pipeline futura di "suggerimento intelligente" che incrocia i
+   * punteggi del paziente con queste tag per consigliare l'app giusta.
+   * Optional per backward compatibility coi vecchi manifest di KINORA;
+   * i moduli nuovi dovrebbero sempre dichiararli.
+   */
+  cognitive_domains?: CognitiveDomain[];
 };

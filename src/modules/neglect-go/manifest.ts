@@ -10,4 +10,5 @@ export const neglectGoManifest: ModuleManifest = {
   gating: { type: 'sessions', freeLimit: 2 },
   status: 'available',
   order: 5,
+  cognitive_domains: ['attention_spatial', 'attention_sustained', 'visuospatial'],
 };

@@ -10,4 +10,5 @@ export const walkingManifest: ModuleManifest = {
   gating: { type: 'sessions', freeLimit: 2 },
   status: 'available',
   order: 4,
+  cognitive_domains: ['motor_planning', 'motor_gross', 'visuospatial'],
 };

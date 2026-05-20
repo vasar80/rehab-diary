@@ -45,7 +45,7 @@ interface ChatMsg {
   text: string;
   widget?:
     | { type: 'calendar'; appointments: MockAppointment[] };
-  inlineAction?: { action: 'diary' | 'appointments' | 'video'; label: string };
+  inlineAction?: { action: 'diary' | 'appointments' | 'video' | 'apps'; label: string };
   kind?: 'intro' | 'narrative';
 }
 
@@ -291,6 +291,13 @@ function HomePage() {
       inlineAction: { action: 'video', label: 'Carica un video' },
     });
     steps.push({
+      id: `intro-${base}-apps`,
+      role: 'assistant',
+      text: 'Vuoi fare un esercizio? Ne abbiamo alcuni che ti tengono allenato in poco tempo.',
+      kind: 'intro',
+      inlineAction: { action: 'apps', label: 'Vedi gli esercizi' },
+    });
+    steps.push({
       id: `intro-${base}-end`,
       role: 'assistant',
       text: 'Altrimenti sono qui, chiedimi pure.',
@@ -313,10 +320,12 @@ function HomePage() {
     }
   }
 
-  function handleInlineAction(action: 'diary' | 'appointments' | 'video') {
+  function handleInlineAction(action: 'diary' | 'appointments' | 'video' | 'apps') {
     cancelHomeIntro();
     if (action === 'diary') {
       startDiary();
+    } else if (action === 'apps') {
+      router.push('/apps');
     } else if (action === 'appointments') {
       const appts = appointments;
       setHistory((h) => [

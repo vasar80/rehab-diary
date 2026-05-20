@@ -10,13 +10,15 @@ import {
   Edit3,
   Search,
   FileText,
+  Sparkles,
 } from 'lucide-react';
 import Wordmark from './Wordmark';
 
-type ActionKey = 'diary' | 'video' | 'appointments' | 'contract';
+type ActionKey = 'diary' | 'video' | 'appointments' | 'contract' | 'apps';
 
 const ACTIONS: { key: ActionKey; icon: React.ReactNode; label: string }[] = [
   { key: 'diary', icon: <BookOpen size={20} strokeWidth={1.7} />, label: 'Compila il diario di oggi' },
+  { key: 'apps', icon: <Sparkles size={20} strokeWidth={1.7} />, label: 'I tuoi esercizi' },
   { key: 'video', icon: <Video size={20} strokeWidth={1.7} />, label: 'Carica video' },
   { key: 'appointments', icon: <CalendarDays size={20} strokeWidth={1.7} />, label: 'Prossimi appuntamenti' },
   { key: 'contract', icon: <FileText size={20} strokeWidth={1.7} />, label: 'Compila il contratto' },
@@ -39,6 +41,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
     else if (key === 'video') router.push('/video');
     else if (key === 'appointments') router.push('/?prompt=appointments');
     else if (key === 'contract') router.push('/?mode=contract');
+    else if (key === 'apps') router.push('/apps');
   }
 
   function handleNewChat() {
