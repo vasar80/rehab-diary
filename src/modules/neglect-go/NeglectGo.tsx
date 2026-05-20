@@ -25,7 +25,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { Viewer } from '@photo-sphere-viewer/core';
 import { MarkersPlugin } from '@photo-sphere-viewer/markers-plugin';
 import { GyroscopePlugin } from '@photo-sphere-viewer/gyroscope-plugin';
@@ -45,38 +44,31 @@ const CAPTURE_HOLD_MS = 650;
  * Panoramas cycled through on each "Continua" tap after winning a round.
  * Tutti gli URL verificati live: HTTP 200, CORS `*`, JPEG equirettangolare.
  *
- * ⚠️  LICENSING — DA RIPULIRE PRIMA DEL LANCIO COMMERCIALE
+ * ⚠️  LICENSING — STATO DELLA RIPULITURA COMMERCIALE
  *
- * Round 1-5 sono asset demo di librerie open-source (threejs, photo-
- * sphere-viewer, pannellum). Le immagini di pannellum.org sono di
- * Matthew Petroff, licenza CC BY-SA 3.0/4.0 — uso commerciale OK MA
- * richiede attribuzione + share-alike, che non vogliamo legare al
- * nostro prodotto. Le immagini di threejs.org e photo-sphere-viewer-
- * data.netlify.app sono asset demo, licenze non documentate → da
- * considerare NON cleared per uso commerciale.
+ * Tutti i panorama DEVONO essere CC0 (public domain) per l'app a
+ * pagamento. Fonte preferita: Polyhaven (polyhaven.com), gold-standard.
  *
- * Round 6 in poi: solo sorgenti **CC0 (public domain)** — di default
- * Polyhaven (polyhaven.com), che è gold-standard per CC0 HDRI/360.
- * Quando passeremo a pagamento, sostituiamo i primi 5 con CC0.
- *
- * Round 1: spiaggia (threejs)              [TODO: replace pre-launch]
- * Round 2: montagna (PSV demo)             [TODO: replace pre-launch]
- * Round 3: osservatorio ALMA (pannellum)   [TODO: replace pre-launch]
- * Round 4: Birmingham Museum (pannellum)   [TODO: replace pre-launch]
- * Round 5: Cerro Toco (pannellum)          [TODO: replace pre-launch]
- * Round 6: Venezia al tramonto — Polyhaven CC0 (4.8 MB, public domain).
+ * Round 1: kloofendal misty morning — Polyhaven CC0       ✅ cleared
+ * Round 2: montagna (PSV demo)                            [TODO: swap]
+ * Round 3: osservatorio ALMA (pannellum CC BY-SA)         [TODO: swap]
+ * Round 4: Birmingham Museum (pannellum CC BY-SA)         [TODO: swap]
+ * Round 5: Cerro Toco (pannellum CC BY-SA)                [TODO: swap]
+ * Round 6: Venezia al tramonto — Polyhaven CC0            ✅ cleared
+ * Round 7: cielo in fiamme (sunset drammatico) — Polyhaven CC0 ✅ cleared
  *
  * Per aggiungere round, APPEND solo all'array — NON modificare la logica
  * di gioco. Le etichette dei marker si auto-calibrano via `roundIndex *
  * TOTAL_TARGETS` in `buildMarkers`.
  */
 const PANORAMA_URLS = [
-  'https://threejs.org/examples/textures/2294472375_24a3b8ef46_o.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/kloofendal_misty_morning_puresky.jpg',
   'https://photo-sphere-viewer-data.netlify.app/assets/sphere.jpg',
   'https://pannellum.org/images/alma.jpg',
   'https://pannellum.org/images/bma-1.jpg',
   'https://pannellum.org/images/cerro-toco-0.jpg',
   'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/venice_sunset.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/the_sky_is_on_fire.jpg',
 ];
 
 /**
@@ -137,22 +129,8 @@ function buildMarkers(roundIndex: number) {
 export function NeglectGo() {
   const t = useTranslations('NeglectGo');
   const locale = useLocale();
-  const search = useSearchParams();
 
-  // DEV/test skip: `/apps/neglect-go?round=N` salta la PermissionGate
-  // e inizia direttamente al round N (1-indexed). Es. ?round=6 apre
-  // Venezia. Range valido [1, PANORAMA_URLS.length], clampato.
-  const initialRoundFromUrl = (() => {
-    const raw = search?.get('round');
-    if (!raw) return null;
-    const n = parseInt(raw, 10);
-    if (!Number.isFinite(n) || n < 1) return null;
-    return Math.min(n, PANORAMA_URLS.length) - 1;
-  })();
-
-  const [phase, setPhase] = useState<Phase>(
-    initialRoundFromUrl !== null ? 'playing' : 'permission'
-  );
+  const [phase, setPhase] = useState<Phase>('permission');
   const [error, setError] = useState<string | null>(null);
   const [capturedIds, setCapturedIds] = useState<Set<number>>(() => new Set());
   const [lockingId, setLockingId] = useState<number | null>(null);
@@ -169,7 +147,26 @@ export function NeglectGo() {
   /** Index into PANORAMA_URLS. Stored as ref because the viewer is
    *  mounted/unmounted via the phase transition, and the ref is read
    *  at mount time — no React render needs to react to it. */
-  const roundIndexRef = useRef(initialRoundFromUrl ?? 0);
+  const roundIndexRef = useRef(0);
+
+  // DEV/test skip: `/apps/neglect-go?round=N` salta il PermissionGate
+  // e inizia al round N (1-indexed). La pagina /apps/[slug] è static-
+  // rendered (generateStaticParams), quindi useState() non vede i query
+  // param all'inizializzazione — vanno letti DOPO il mount lato client
+  // con useEffect + window.location.search. Es. ?round=6 → Venezia.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get('round');
+    if (!raw) return;
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 1) return;
+    const idx = Math.min(n, PANORAMA_URLS.length) - 1;
+    roundIndexRef.current = idx;
+    setPhase('playing');
+    // run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const capturedCount = capturedIds.size;
   // Split the captured set by side so the HUD makes the contralesional

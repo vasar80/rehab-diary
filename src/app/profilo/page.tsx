@@ -21,7 +21,8 @@ import ChatInputBar from '@/components/ChatInputBar';
 import Wordmark from '@/components/Wordmark';
 import { useAppStore } from '@/lib/store';
 import { useAuth } from '@/lib/auth-context';
-import { getAccessToken } from '@/lib/supabase/client';
+import { getAccessToken, supabase } from '@/lib/supabase/client';
+import { KeyRound, Check } from 'lucide-react';
 
 export default function ProfiloPage() {
   const router = useRouter();
@@ -37,6 +38,43 @@ export default function ProfiloPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [actionError, setActionError] = useState('');
+
+  // Cambia password
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [pwdSubmitting, setPwdSubmitting] = useState(false);
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSaved, setPwdSaved] = useState(false);
+
+  async function submitChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwdError('');
+    if (newPwd.length < 8) {
+      setPwdError('Minimo 8 caratteri');
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      setPwdError('Le due password non coincidono');
+      return;
+    }
+    setPwdSubmitting(true);
+    try {
+      const { error } = await supabase().auth.updateUser({ password: newPwd });
+      if (error) throw error;
+      setPwdSaved(true);
+      setNewPwd('');
+      setConfirmPwd('');
+      setTimeout(() => {
+        setPwdOpen(false);
+        setPwdSaved(false);
+      }, 1400);
+    } catch (e) {
+      setPwdError(e instanceof Error ? e.message : 'Errore');
+    } finally {
+      setPwdSubmitting(false);
+    }
+  }
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -231,6 +269,18 @@ export default function ProfiloPage() {
 
         <Section title="Account" stagger={5}>
           <ListItem
+            icon={<KeyRound size={20} strokeWidth={1.7} className="text-text-secondary" />}
+            title="Cambia password"
+            subtitle="Imposta una nuova password per il tuo account"
+            onClick={() => {
+              setPwdOpen(true);
+              setNewPwd('');
+              setConfirmPwd('');
+              setPwdError('');
+              setPwdSaved(false);
+            }}
+          />
+          <ListItem
             icon={<LogOut size={20} strokeWidth={1.7} className="text-danger" />}
             title="Esci"
             subtitle="Disconnetti il tuo account"
@@ -348,6 +398,88 @@ export default function ProfiloPage() {
               className="w-full mt-3 gradient-primary text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 glow-primary"
             >
               Entra
+            </button>
+          </form>
+        </div>
+      )}
+
+      {pwdOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-md flex items-end animate-fade-in">
+          <form
+            onSubmit={submitChangePassword}
+            className="glass-strong w-full rounded-t-[2.5rem] p-5 pb-10 animate-slide-up max-w-md mx-auto"
+          >
+            <div className="w-12 h-1 bg-text-muted/30 rounded-full mx-auto mb-5" />
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <KeyRound size={20} className="text-primary" />
+                <h2 className="text-text font-bold text-base">Cambia password</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPwdOpen(false)}
+                className="w-9 h-9 rounded-2xl flex items-center justify-center active:scale-95 transition-transform text-text-secondary"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+              La nuova password sostituisce subito quella corrente. Minimo 8
+              caratteri.
+            </p>
+
+            <input
+              type="password"
+              placeholder="Nuova password"
+              value={newPwd}
+              onChange={(e) => setNewPwd(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+              className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all mb-2.5"
+            />
+            <input
+              type="password"
+              placeholder="Conferma nuova password"
+              value={confirmPwd}
+              onChange={(e) => setConfirmPwd(e.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+              className="w-full bg-white/70 border border-white/80 rounded-2xl px-4 py-3.5 text-text placeholder:text-text-muted focus:outline-none focus:border-primary focus:bg-white transition-all"
+            />
+
+            {pwdError && (
+              <div className="mt-3 bg-danger/10 border border-danger/30 rounded-2xl px-4 py-2.5">
+                <p className="text-danger text-sm font-medium">{pwdError}</p>
+              </div>
+            )}
+
+            {pwdSaved && (
+              <div className="mt-3 bg-success/10 border border-success/30 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                <Check size={16} className="text-success" />
+                <p className="text-success text-sm font-medium">
+                  Password aggiornata.
+                </p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={pwdSubmitting || !newPwd || !confirmPwd}
+              className="w-full mt-4 gradient-primary text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 glow-primary"
+            >
+              {pwdSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Salvo…
+                </>
+              ) : (
+                <>
+                  <KeyRound size={18} />
+                  Salva nuova password
+                </>
+              )}
             </button>
           </form>
         </div>

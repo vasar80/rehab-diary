@@ -13,6 +13,7 @@ import {
   Bot,
   Sparkles,
   LogOut,
+  UserCircle,
   Menu,
   X,
   Bell,
@@ -406,6 +407,35 @@ export function AdminShell({ children }: { children: ReactNode }) {
             borderTop: '1px solid rgba(148,163,184,0.08)',
           }}
         >
+          <Link
+            href="/profilo"
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '10px 12px',
+              borderRadius: 9,
+              color: '#94a3b8',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 500,
+              fontFamily: 'inherit',
+              transition: 'background 0.12s, color 0.12s',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textAlign: 'left',
+              textDecoration: 'none',
+              marginBottom: 4,
+            }}
+          >
+            <UserCircle size={17} strokeWidth={2} style={{ flexShrink: 0 }} />
+            <span style={{ opacity: showSidebarLabels ? 1 : 0, transition: 'opacity 0.12s' }}>
+              Profilo · cambia password
+            </span>
+          </Link>
           <button
             type="button"
             onClick={handleLogout}
