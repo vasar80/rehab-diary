@@ -71,7 +71,7 @@ export default function ProfiloPage() {
         isDemo: true,
       });
       setOwnerPwdOpen(false);
-      router.push('/super');
+      router.push('/kinora-admin');
     } else {
       setOwnerPwdError('Password errata');
     }

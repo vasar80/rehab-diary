@@ -135,11 +135,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (error) throw error;
-    // Supabase silently returns user=null (or user with empty identities[]) when
-    // the email is already registered — it's an anti-enumeration safeguard.
-    // Convert this into a clear, actionable error for the user.
-    const identitiesCount = data.user?.identities?.length ?? 0;
-    if (!data.user || identitiesCount === 0) {
+    if (!data.user) {
+      throw new Error('Registrazione fallita: nessun utente creato.');
+    }
+
+    // Supabase anti-enumeration: quando l'email è già registrata, signUp
+    // NON ritorna errore. Ritorna un user object dove però `created_at` è
+    // il timestamp originale (più vecchio del momento corrente). Per email
+    // genuinamente nuove `created_at` ≈ now.
+    //
+    // IMPORTANTE: il check via `identities.length === 0` (suggerito dai
+    // docs ufficiali) NON funziona affidabilmente — supabase-js stripsa
+    // l'array delle identities dalla response anche per signUp validi
+    // quando l'email-confirmation è abilitata. Quindi usavamo identities
+    // come segnale ma davamo "email già usata" anche per signup riusciti.
+    const created = new Date(data.user.created_at);
+    const ageSec = (Date.now() - created.getTime()) / 1000;
+    if (ageSec > 60) {
+      // Account preesistente — Supabase non genera errore per non rivelare
+      // l'esistenza dell'email, ma il created_at lo tradisce.
       throw new Error(
         'Questa email è già registrata su Kinora. Prova ad accedere invece di registrarti.'
       );

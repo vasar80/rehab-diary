@@ -52,9 +52,13 @@ export default function LoginPage() {
         sex: mode === 'patient' ? sex : undefined,
         isDemo: false,
       });
-      if (finalRole === 'super_admin') router.push('/super');
-      else if (finalRole === 'admin') router.push('/admin');
-      else router.push('/');
+      // super_admin e admin atterrano sulla dashboard completa
+      // /kinora-admin (la vecchia /super è deprecata — redirezionata).
+      if (finalRole === 'super_admin' || finalRole === 'admin') {
+        router.push('/kinora-admin');
+      } else {
+        router.push('/');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Errore sconosciuto';
       const lower = msg.toLowerCase();
