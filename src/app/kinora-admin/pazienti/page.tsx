@@ -13,7 +13,7 @@ import {
   ExternalLink,
   AlertTriangle,
 } from 'lucide-react';
-import { getAccessToken } from '@/lib/supabase/client';
+import { getAccessToken, supabase } from '@/lib/supabase/client';
 
 interface PatientRow {
   id: number | string;
@@ -112,17 +112,19 @@ export default function PazientiPage() {
     error: string;
   } | null>(null);
 
-  // Modale "Vivi come": genera un magic link per il paziente e lo
-  // mostra con istruzioni per aprirlo in incognito (la sessione admin
-  // sopravvive solo se il link viene aperto in un contesto cookie
-  // separato).
+  // Modale "Vivi come": genera un OTP per il paziente target, lo
+  // verifica browser-side e installa la sessione del paziente nello
+  // stesso tab. Lo staff perde la propria sessione (esce dalla
+  // dashboard) ma può rifare login al volo con la sua password.
+  // Pattern identico a /Users/valerio/.../DASHBOARD/src/app/api/auth/
+  // impersonate — più affidabile dell'action_link perché niente
+  // dipendenza dalla Supabase Site URL allowlist.
   const [impersonate, setImpersonate] = useState<{
     patient: PatientRow;
     loading: boolean;
-    url: string | null;
     error: string;
-    copied: boolean;
     autoCreated: boolean;
+    confirming: boolean;
   } | null>(null);
 
   // Mappa auth_uid → tier override. Caricata in parallelo all'elenco pazienti.
@@ -293,14 +295,24 @@ export default function PazientiPage() {
     });
   }
 
-  async function openImpersonate(patient: PatientRow) {
+  function openImpersonate(patient: PatientRow) {
     setImpersonate({
       patient,
-      loading: true,
-      url: null,
+      loading: false,
       error: '',
-      copied: false,
       autoCreated: false,
+      confirming: true,
+    });
+  }
+
+  async function confirmImpersonate() {
+    if (!impersonate) return;
+    const patient = impersonate.patient;
+    setImpersonate({
+      ...impersonate,
+      loading: true,
+      error: '',
+      confirming: false,
     });
     try {
       const token = await getAccessToken();
@@ -312,10 +324,7 @@ export default function PazientiPage() {
         },
         body: JSON.stringify({
           email: patient.email,
-          redirectTo: '/',
           name: `${patient.first_name} ${patient.last_name}`,
-          // Solo per pazienti gestionale; per self-signup id è uno
-          // stringid, non un numero — lo lasciamo undefined.
           patientId:
             typeof patient.id === 'number' ? patient.id : undefined,
         }),
@@ -324,23 +333,32 @@ export default function PazientiPage() {
         const e = await res.json().catch(() => ({}));
         throw new Error(e.error || `Errore ${res.status}`);
       }
-      const data = await res.json();
-      setImpersonate({
-        patient,
-        loading: false,
-        url: data.url,
-        error: '',
-        copied: false,
-        autoCreated: Boolean(data.autoCreated),
+      const data = (await res.json()) as {
+        email?: string;
+        otp?: string;
+        autoCreated?: boolean;
+      };
+      if (!data.email || !data.otp) {
+        throw new Error('Risposta API senza OTP');
+      }
+      // Verifica OTP browser-side → installa la sessione del paziente
+      // target nello stesso tab. Lo staff perde la sessione corrente.
+      const { error: vErr } = await supabase().auth.verifyOtp({
+        email: data.email,
+        token: data.otp,
+        type: 'email',
       });
+      if (vErr) throw new Error(`Verifica OTP fallita: ${vErr.message}`);
+      // Redirect alla home patient — l'AuthToStoreSync popolerà zustand
+      // dal nuovo supabaseUser (Esmeralda Abruzzese, non Mario).
+      window.location.assign('/');
     } catch (e) {
       setImpersonate({
         patient,
         loading: false,
-        url: null,
         error: e instanceof Error ? e.message : 'Errore',
-        copied: false,
         autoCreated: false,
+        confirming: true,
       });
     }
   }
@@ -825,6 +843,7 @@ export default function PazientiPage() {
         <ImpersonateModal
           state={impersonate}
           setState={setImpersonate}
+          onConfirm={confirmImpersonate}
         />
       )}
 
@@ -1142,31 +1161,19 @@ function TierModal({
 function ImpersonateModal({
   state,
   setState,
+  onConfirm,
 }: {
   state: {
     patient: PatientRow;
     loading: boolean;
-    url: string | null;
     error: string;
-    copied: boolean;
     autoCreated: boolean;
+    confirming: boolean;
   };
   setState: (s: typeof state | null) => void;
+  onConfirm: () => void;
 }) {
   const fullName = `${state.patient.first_name} ${state.patient.last_name}`;
-
-  async function copyUrl() {
-    if (!state.url) return;
-    try {
-      await navigator.clipboard.writeText(state.url);
-      setState({ ...state, copied: true });
-      setTimeout(() => {
-        setState({ ...state, copied: false });
-      }, 1800);
-    } catch {
-      /* clipboard may be blocked — user can still long-press the link */
-    }
-  }
 
   return (
     <div
@@ -1182,17 +1189,18 @@ function ImpersonateModal({
         justifyContent: 'center',
         padding: 16,
       }}
-      onClick={() => setState(null)}
+      onClick={() => !state.loading && setState(null)}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 'min(480px, 100%)',
+          width: 'min(440px, 100%)',
           background: '#ffffff',
           borderRadius: 12,
           padding: 22,
           boxShadow: '0 24px 60px rgba(15,23,42,0.32)',
           fontFamily: 'inherit',
+          position: 'relative',
         }}
       >
         <div
@@ -1219,23 +1227,41 @@ function ImpersonateModal({
           {state.patient.email}
         </p>
 
-        {state.loading && (
-          <div
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 9,
+            padding: '11px 13px',
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: 8,
+            marginBottom: 14,
+          }}
+        >
+          <AlertTriangle
+            size={15}
+            style={{ color: '#b45309', flexShrink: 0, marginTop: 1 }}
+          />
+          <p
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '18px 0',
-              color: '#475569',
-              fontSize: 13,
+              margin: 0,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: '#78350f',
             }}
           >
-            <Loader2 size={16} className="animate-spin" />
-            Genero un link di accesso …
-          </div>
-        )}
+            <strong>La tua sessione admin verrà sostituita.</strong> Verrai
+            loggato come questo paziente in questo tab. Per tornare staff:
+            esci e fai login con la tua password (
+            <code style={{ background: '#fef3c7', padding: '0 4px', borderRadius: 4 }}>
+              Kinora2026!
+            </code>
+            ).
+          </p>
+        </div>
 
-        {state.error && !state.loading && (
+        {state.error && (
           <div
             style={{
               padding: 12,
@@ -1244,156 +1270,73 @@ function ImpersonateModal({
               border: '1px solid #fca5a5',
               borderRadius: 8,
               fontSize: 12.5,
+              marginBottom: 14,
             }}
           >
             {state.error}
           </div>
         )}
 
-        {state.url && !state.loading && (
-          <>
-            {state.autoCreated && (
-              <div
-                style={{
-                  padding: '10px 13px',
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  borderRadius: 8,
-                  marginBottom: 10,
-                  fontSize: 12,
-                  lineHeight: 1.45,
-                  color: '#065f46',
-                }}
-              >
-                <strong>Account creato silenziosamente.</strong> Nessuna
-                email è stata inviata al paziente. La password è random e
-                inutilizzabile — il paziente non sa nulla.
-              </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => setState(null)}
+            disabled={state.loading}
+            style={{
+              flex: 1,
+              padding: '10px 14px',
+              background: 'transparent',
+              color: '#475569',
+              border: '1px solid #cbd5e1',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: state.loading ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Annulla
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={state.loading}
+            style={{
+              flex: 1.4,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              padding: '10px 14px',
+              background: '#b45309',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: state.loading ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              opacity: state.loading ? 0.7 : 1,
+            }}
+          >
+            {state.loading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Entro come paziente…
+              </>
+            ) : (
+              <>
+                <Eye size={14} />
+                Entra come paziente
+              </>
             )}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 9,
-                padding: '11px 13px',
-                background: '#fffbeb',
-                border: '1px solid #fde68a',
-                borderRadius: 8,
-                marginBottom: 14,
-              }}
-            >
-              <AlertTriangle
-                size={15}
-                style={{ color: '#b45309', flexShrink: 0, marginTop: 1 }}
-              />
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  lineHeight: 1.45,
-                  color: '#78350f',
-                }}
-              >
-                <strong>Apri il link in una finestra in incognito.</strong> Se
-                lo apri nello stesso browser perderai la tua sessione admin
-                (il login del paziente sovrascrive i cookie).
-              </p>
-            </div>
-
-            <div
-              style={{
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, "JetBrains Mono", monospace',
-                fontSize: 10.5,
-                color: '#334155',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: 8,
-                padding: '9px 11px',
-                wordBreak: 'break-all',
-                lineHeight: 1.5,
-                marginBottom: 14,
-                maxHeight: 110,
-                overflow: 'auto',
-              }}
-            >
-              {state.url}
-            </div>
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                type="button"
-                onClick={copyUrl}
-                style={{
-                  flex: 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '9px 12px',
-                  background: state.copied ? '#dcfce7' : '#f1f5f9',
-                  color: state.copied ? '#15803d' : '#0f172a',
-                  border: '1px solid',
-                  borderColor: state.copied ? '#86efac' : '#cbd5e1',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  transition: 'background 0.12s',
-                }}
-              >
-                {state.copied ? (
-                  <>
-                    <Check size={14} />
-                    Copiato
-                  </>
-                ) : (
-                  <>
-                    <Copy size={14} />
-                    Copia link
-                  </>
-                )}
-              </button>
-              <a
-                href={state.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  flex: 1,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  padding: '9px 12px',
-                  background: '#0f172a',
-                  color: '#ffffff',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                }}
-              >
-                <ExternalLink size={14} />
-                Apri in nuova scheda
-              </a>
-            </div>
-            <p
-              style={{
-                margin: '12px 0 0',
-                fontSize: 11,
-                color: '#94a3b8',
-                textAlign: 'center',
-              }}
-            >
-              Il link è valido per 1 ora ed è single-use.
-            </p>
-          </>
-        )}
+          </button>
+        </div>
 
         <button
           type="button"
-          onClick={() => setState(null)}
+          onClick={() => !state.loading && setState(null)}
+          aria-label="Chiudi"
           style={{
             position: 'absolute',
             top: 12,
@@ -1406,9 +1349,8 @@ function ImpersonateModal({
             border: 'none',
             background: 'transparent',
             color: '#94a3b8',
-            cursor: 'pointer',
+            cursor: state.loading ? 'not-allowed' : 'pointer',
           }}
-          aria-label="Chiudi"
         >
           <X size={18} />
         </button>

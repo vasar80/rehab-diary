@@ -44,18 +44,20 @@ const CAPTURE_HOLD_MS = 650;
  * Panoramas cycled through on each "Continua" tap after winning a round.
  * Tutti gli URL verificati live: HTTP 200, CORS `*`, JPEG equirettangolare.
  *
- * ⚠️  LICENSING — STATO DELLA RIPULITURA COMMERCIALE
+ * 🟢 LICENSING — TUTTI CC0 (public domain, uso commerciale libero)
  *
- * Tutti i panorama DEVONO essere CC0 (public domain) per l'app a
- * pagamento. Fonte preferita: Polyhaven (polyhaven.com), gold-standard.
+ * Fonte: Polyhaven (polyhaven.com), gold-standard per HDRI/panorama CC0.
+ * Nessuna attribuzione richiesta, nessun share-alike — uso commerciale
+ * libero per l'app a pagamento.
  *
- * Round 1: Belfast — sunset drammatico urbano — Polyhaven CC0   ✅ cleared
- * Round 2: Dikhololo — paesaggio notturno stellato — Polyhaven CC0 ✅ cleared
- * Round 3: osservatorio ALMA (pannellum CC BY-SA)               [TODO: swap]
- * Round 4: Birmingham Museum (pannellum CC BY-SA)               [TODO: swap]
- * Round 5: Cerro Toco (pannellum CC BY-SA)                      [TODO: swap]
- * Round 6: Venezia al tramonto — Polyhaven CC0                  ✅ cleared
- * Round 7: cielo in fiamme (sunset drammatico) — Polyhaven CC0  ✅ cleared
+ * Round 1: Belfast — sunset drammatico urbano (UK, 15MB)
+ * Round 2: Dikhololo — notte stellata in Africa (9MB)
+ * Round 3: Kiara — savana all'alba (Kenya, 5MB)
+ * Round 4: Vatican Road — Roma vista Vaticano (6MB)
+ * Round 5: Ulm Münster — cattedrale gotica (Germania, 6MB)
+ * Round 6: Venezia al tramonto (Italia, 5MB)
+ * Round 7: The Lost City — rovine antiche (4MB)
+ * Round 8: Cielo in fiamme — sunset drammatico (3MB)
  *
  * Per aggiungere round, APPEND solo all'array — NON modificare la logica
  * di gioco. Le etichette dei marker si auto-calibrano via `roundIndex *
@@ -64,10 +66,11 @@ const CAPTURE_HOLD_MS = 650;
 const PANORAMA_URLS = [
   'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/belfast_sunset_puresky.jpg',
   'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/dikhololo_night.jpg',
-  'https://pannellum.org/images/alma.jpg',
-  'https://pannellum.org/images/bma-1.jpg',
-  'https://pannellum.org/images/cerro-toco-0.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/kiara_1_dawn.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/vatican_road.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/ulmer_muenster.jpg',
   'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/venice_sunset.jpg',
+  'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/the_lost_city.jpg',
   'https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/the_sky_is_on_fire.jpg',
 ];
 
