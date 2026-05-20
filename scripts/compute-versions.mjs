@@ -24,11 +24,19 @@ const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 // Patient side = the PWA the actual patient/family uses. Everything
 // under src/app/ EXCEPT /kinora-admin/ and the legacy /super/, plus
-// the shared lib + components used by the patient UI.
+// the shared lib + components used by the patient UI. Includes also
+// /src/modules, /src/core, /src/i18n e /messages perché i moduli
+// applicativi trasferiti da KINORA sono importati da /apps/[slug] —
+// una modifica al modulo NON modifica il consumer, quindi senza
+// includere queste cartelle il banner di update non si attiverebbe.
 const PATIENT_INCLUDE = [
   'src/app',
   'src/lib',
   'src/components',
+  'src/modules',
+  'src/core',
+  'src/i18n',
+  'messages',
   'public/manifest.json',
   'public/sw.js',
 ];

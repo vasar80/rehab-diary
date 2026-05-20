@@ -1,0 +1,124 @@
+{
+  "Brand": {
+    "name": "Kinorà",
+    "tagline": "Esercizi e applicativi per chi torna in cammino"
+  },
+  "Home": {
+    "greetingMorning": "Buongiorno",
+    "greetingAfternoon": "Buon pomeriggio",
+    "greetingEvening": "Buonasera",
+    "guestName": "ospite",
+    "subtitle": "Sessione {current} di {total} · Settimana {week}",
+    "continueLabel": "Continua dove eri",
+    "exploreLabel": "Esplora",
+    "exploreCount": "{count} app",
+    "xpEarn": "+{xp} XP",
+    "streakLabel": "{days} GG",
+    "weekProgress": "{completed} sessioni questa settimana"
+  },
+  "Continue": {
+    "noActiveSession": "Nessuna sessione in corso",
+    "startFirst": "Inizia il tuo primo esercizio"
+  },
+  "Modules": {
+    "crossword": {
+      "name": "Cruciverba",
+      "short": "Linguaggio"
+    },
+    "imageRecognition": {
+      "name": "Riconoscimento",
+      "short": "Memoria"
+    },
+    "audiobooks": {
+      "name": "Audiolibri",
+      "short": "Ascolto"
+    },
+    "walking": {
+      "name": "Cammino",
+      "short": "Movimento"
+    },
+    "neglectGo": {
+      "name": "Neglect Go",
+      "short": "Esplora lo spazio"
+    }
+  },
+  "Categories": {
+    "logopedia": "Logopedia",
+    "memoria": "Memoria",
+    "movimento": "Movimento",
+    "cognitivo": "Cognitivo",
+    "ascolto": "Ascolto",
+    "neglect": "Negligenza"
+  },
+  "Nav": {
+    "home": "Home",
+    "library": "Libreria",
+    "profile": "Profilo"
+  },
+  "Status": {
+    "comingSoon": "Presto disponibile",
+    "available": "Disponibile",
+    "level": "Livello",
+    "completed": "completato",
+    "minutes": "{n, plural, one {# minuto} other {# minuti}}"
+  },
+  "Common": {
+    "back": "Indietro",
+    "close": "Chiudi",
+    "continue": "Continua",
+    "tryAgain": "Riprova",
+    "next": "Avanti",
+    "comingSoonTitle": "Presto disponibile",
+    "comingSoonBody": "Stiamo finendo di costruire questo applicativo. Torna a trovarci."
+  },
+  "Walking": {
+    "title": "Cammino",
+    "intro": "Trascina i fotogrammi nell'ordine corretto del passo.",
+    "hint": "Pensa a una persona che cammina vista di lato.",
+    "shuffle": "Mescola",
+    "verify": "Verifica",
+    "successTitle": "Sequenza corretta",
+    "successBody": "Hai ricostruito il ciclo del cammino.",
+    "errorTitle": "Non è ancora corretto",
+    "errorBody": "Concentrati sul movimento delle gambe e delle braccia. Riprova.",
+    "frameLabel": "Fotogramma {position} di {total}",
+    "frameNumber": "{n}",
+    "dragHandle": "Trascina",
+    "introTitle": "Metti in ordine la sequenza del passo",
+    "introBody": "Trascina i fotogrammi per ricostruire il ciclo del cammino. Salirai di livello a ogni successo.",
+    "introCta": "Iniziamo",
+    "successUnlocked": "Livello {next} sbloccato",
+    "successMaxLevel": "Hai completato tutti i livelli!",
+    "outOfLivesTitle": "Vite esaurite",
+    "outOfLivesBody": "La prossima vita arriva tra:",
+    "errorPartial": "{count} su {total} al posto giusto",
+    "errorNothing": "Riprova! Pensa al ciclo del passo",
+    "timeLabel": "Tempo",
+    "newBest": "Nuovo record",
+    "previousBest": "Precedente: {time}"
+  },
+  "NeglectGo": {
+    "eyebrow": "Neglect · esplora",
+    "title": "Trova i numeri intorno a te",
+    "intro": "Sei dentro un panorama a 360 gradi. Dieci numeri sono nascosti tutto attorno: a destra, a sinistra, in alto, in basso. Esplora con il dito per scovarli tutti.",
+    "step1": "Trascina sullo schermo per ruotare lo sguardo.",
+    "step2": "Porta un numero al centro del mirino.",
+    "step3": "Tieni fermo: dopo un attimo il numero viene catturato.",
+    "cta": "Inizia",
+    "calibrating": "Tieni il telefono fermo",
+    "calibratingHint": "Guarda davanti a te per qualche istante: stiamo calibrando.",
+    "errorCamera": "Non riesco ad accedere alla fotocamera. Controlla i permessi del browser e riprova.",
+    "errorMotion": "Per giocare servono i sensori di movimento. Su iPhone: Impostazioni → Safari → Avanzate → Dati siti web → cerca questo sito → tocca Rimuovi. Poi torna qui, ricarica la pagina e tocca Inizia: scegli «Consenti» quando il telefono lo chiede.",
+    "errorNoSensor": "Questo dispositivo non rileva il movimento. Apri Neglect Go da uno smartphone.",
+    "wonEyebrow": "Tutti catturati",
+    "wonTitle": "Hai trovato tutti e dieci",
+    "wonBody": "Hai esplorato lo spazio intorno a te. Continua per una nuova partita.",
+    "controlTouch": "Tocco",
+    "controlGyro": "Movimento",
+    "switchToTouch": "Passa al controllo a tocco",
+    "switchToGyro": "Passa al controllo col movimento del telefono",
+    "recalibrate": "Ricalibra",
+    "landscapeTitle": "Tieni il telefono in verticale",
+    "landscapeBody": "Neglect Go funziona solo in modalità ritratto."
+  }
+}

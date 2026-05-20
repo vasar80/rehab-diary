@@ -1,0 +1,124 @@
+{
+  "Brand": {
+    "name": "Kinorà",
+    "tagline": "Exercises and tools for those getting back on track"
+  },
+  "Home": {
+    "greetingMorning": "Good morning",
+    "greetingAfternoon": "Good afternoon",
+    "greetingEvening": "Good evening",
+    "guestName": "guest",
+    "subtitle": "Session {current} of {total} · Week {week}",
+    "continueLabel": "Pick up where you left off",
+    "exploreLabel": "Explore",
+    "exploreCount": "{count} apps",
+    "xpEarn": "+{xp} XP",
+    "streakLabel": "{days} D",
+    "weekProgress": "{completed} sessions this week"
+  },
+  "Continue": {
+    "noActiveSession": "No active session",
+    "startFirst": "Start your first exercise"
+  },
+  "Modules": {
+    "crossword": {
+      "name": "Crossword",
+      "short": "Language"
+    },
+    "imageRecognition": {
+      "name": "Recognition",
+      "short": "Memory"
+    },
+    "audiobooks": {
+      "name": "Audiobooks",
+      "short": "Listening"
+    },
+    "walking": {
+      "name": "Walking",
+      "short": "Movement"
+    },
+    "neglectGo": {
+      "name": "Neglect Go",
+      "short": "Explore space"
+    }
+  },
+  "Categories": {
+    "logopedia": "Speech therapy",
+    "memoria": "Memory",
+    "movimento": "Movement",
+    "cognitivo": "Cognitive",
+    "ascolto": "Listening",
+    "neglect": "Neglect"
+  },
+  "Nav": {
+    "home": "Home",
+    "library": "Library",
+    "profile": "Profile"
+  },
+  "Status": {
+    "comingSoon": "Coming soon",
+    "available": "Available",
+    "level": "Level",
+    "completed": "completed",
+    "minutes": "{n, plural, one {# minute} other {# minutes}}"
+  },
+  "Common": {
+    "back": "Back",
+    "close": "Close",
+    "continue": "Continue",
+    "tryAgain": "Try again",
+    "next": "Next",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "We're still building this applicative. Check back soon."
+  },
+  "Walking": {
+    "title": "Walking",
+    "intro": "Drag the frames into the correct order of the gait cycle.",
+    "hint": "Picture someone walking, seen from the side.",
+    "shuffle": "Shuffle",
+    "verify": "Check",
+    "successTitle": "Correct sequence",
+    "successBody": "You've reconstructed the walking cycle.",
+    "errorTitle": "Not yet right",
+    "errorBody": "Focus on the movement of the legs and arms. Try again.",
+    "frameLabel": "Frame {position} of {total}",
+    "frameNumber": "{n}",
+    "dragHandle": "Drag",
+    "introTitle": "Reorder the walking sequence",
+    "introBody": "Drag the frames to rebuild the gait cycle. You'll level up after every success.",
+    "introCta": "Let's go",
+    "successUnlocked": "Level {next} unlocked",
+    "successMaxLevel": "You completed every level!",
+    "outOfLivesTitle": "Out of lives",
+    "outOfLivesBody": "Your next life arrives in:",
+    "errorPartial": "{count} of {total} in place",
+    "errorNothing": "Try again! Think about the gait cycle",
+    "timeLabel": "Time",
+    "newBest": "New record",
+    "previousBest": "Previous: {time}"
+  },
+  "NeglectGo": {
+    "eyebrow": "Neglect · explore",
+    "title": "Find the numbers around you",
+    "intro": "You're inside a 360° panorama. Ten numbers are hidden all around: right, left, up, down. Drag with your finger to find them all.",
+    "step1": "Drag across the screen to look around.",
+    "step2": "Bring a number into the centre reticle.",
+    "step3": "Hold still: after a moment the number is captured.",
+    "cta": "Start",
+    "calibrating": "Hold the phone steady",
+    "calibratingHint": "Look forward for a moment while we calibrate.",
+    "errorCamera": "Can't access the camera. Check your browser permissions and try again.",
+    "errorMotion": "Motion sensors are needed to play. On iPhone: Settings → Safari → Advanced → Website Data → find this site → tap Remove. Then come back, reload the page, tap Start, and choose \"Allow\" when prompted.",
+    "errorNoSensor": "This device can't detect motion. Open Neglect Go from a smartphone.",
+    "wonEyebrow": "All captured",
+    "wonTitle": "You found all ten",
+    "wonBody": "You scanned the space around you. Continue for another round.",
+    "controlTouch": "Touch",
+    "controlGyro": "Motion",
+    "switchToTouch": "Switch to touch control",
+    "switchToGyro": "Switch to phone motion control",
+    "recalibrate": "Recalibrate",
+    "landscapeTitle": "Hold the phone upright",
+    "landscapeBody": "Neglect Go only works in portrait mode."
+  }
+}
