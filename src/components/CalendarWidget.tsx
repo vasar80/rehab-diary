@@ -14,11 +14,13 @@ const MONTHS = [
 ];
 
 const TYPE_META: Record<MockAppointment['type'], { color: string; short: string }> = {
-  physio_monthly: { color: '#322A6E', short: 'Visita fisio' },
+  physio_monthly: { color: '#322A6E', short: 'Regolare fisio' },
   physio_boost: { color: '#6B5DA8', short: 'Boost fisio' },
+  physio_measurement: { color: '#4A3F8C', short: 'Misurazione' },
+  speech_regular: { color: '#10b981', short: 'Logopedia' },
   group_grasp: { color: '#E85A7A', short: 'Lab presa' },
   group_walking: { color: '#F4A6B7', short: 'Lab cammino' },
-  counselor: { color: '#0EA5E9', short: 'Counselor' },
+  counselor: { color: '#0EA5E9', short: 'Consulente' },
 };
 
 export default function CalendarWidget({ appointments, monthOffset = 0 }: CalendarWidgetProps) {

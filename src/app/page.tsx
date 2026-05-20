@@ -22,7 +22,8 @@ import {
   nextCommitment,
   buildContractItems,
 } from '@/lib/contract-script';
-import { generateUpcomingAppointments, MockAppointment, findAppointmentTomorrow } from '@/lib/appointments-mock';
+import { MockAppointment, findAppointmentTomorrow } from '@/lib/appointments-mock';
+import { useAppointments } from '@/lib/hooks/useAppointments';
 import CalendarWidget from '@/components/CalendarWidget';
 import DiaryVisual, { VisualType } from '@/components/DiaryVisual';
 
@@ -75,6 +76,9 @@ function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, todayCompleted, getStreak, getComplianceRate, entries, videos, contractItems } = useAppStore();
+  // Appuntamenti reali dal gestionale per il paziente loggato; fallback
+  // al mock se self-signup / non autenticato (vedi useAppointments).
+  const { appointments } = useAppointments();
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState('');
   const [history, setHistory] = useState<ChatMsg[]>([]);
@@ -131,7 +135,7 @@ function HomePage() {
       type: ci.type,
       isActive: ci.isActive,
     }));
-    const upcomingAppointments = generateUpcomingAppointments().slice(0, 6).map((a) => ({
+    const upcomingAppointments = appointments.slice(0, 6).map((a) => ({
       date: a.date.toISOString().split('T')[0],
       time: a.time,
       title: a.title,
@@ -152,7 +156,7 @@ function HomePage() {
       contract,
       upcomingAppointments,
     };
-  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, contractItems]);
+  }, [user, todayCompleted, getStreak, getComplianceRate, entries, videos, name, contractItems, appointments]);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -314,7 +318,7 @@ function HomePage() {
     if (action === 'diary') {
       startDiary();
     } else if (action === 'appointments') {
-      const appts = generateUpcomingAppointments();
+      const appts = appointments;
       setHistory((h) => [
         ...h,
         { id: `u-${Date.now()}`, role: 'user', text: 'Quali sono i miei prossimi appuntamenti?' },
@@ -472,7 +476,7 @@ function HomePage() {
   }
 
   async function finishDiary(answer: DiaryAnswer) {
-    const apptTomorrow = findAppointmentTomorrow(generateUpcomingAppointments());
+    const apptTomorrow = findAppointmentTomorrow(appointments);
     const baseText = 'Grazie, ho salvato il diario. Se ti va possiamo continuare a parlare di qualsiasi cosa.';
     const closingText = apptTomorrow
       ? `${baseText}\n\nQuasi dimenticavo: domani hai "${apptTomorrow.title}" alle ${apptTomorrow.time} con ${apptTomorrow.who}. Ti ci faccio trovare pronto.`
@@ -547,7 +551,7 @@ function HomePage() {
         role: 'user',
         text: 'Quali sono i miei prossimi appuntamenti?',
       };
-      const appts = generateUpcomingAppointments();
+      const appts = appointments;
       const botMsg: ChatMsg = {
         id: `a-${Date.now()}`,
         role: 'assistant',
