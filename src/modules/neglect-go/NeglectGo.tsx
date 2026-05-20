@@ -31,6 +31,7 @@ import { GyroscopePlugin } from '@photo-sphere-viewer/gyroscope-plugin';
 import '@photo-sphere-viewer/core/index.css';
 import '@photo-sphere-viewer/markers-plugin/index.css';
 import { ArrowRightIcon } from '@/components/icons';
+import { useAppStore } from '@/lib/store';
 import { playCaptureSound, playLockTick } from './sounds';
 
 const TOTAL_TARGETS = 10;
@@ -133,12 +134,21 @@ export function NeglectGo() {
   const t = useTranslations('NeglectGo');
   const locale = useLocale();
 
+  // Admin-only round picker: il widget skip è visibile SOLO se l'utente
+  // loggato è admin/super_admin. È una "back-door" di sviluppo per saltare
+  // mappe senza giocare tutte le precedenti. Lettura dello zustand store
+  // dell'app — è l'unica concessione al codice host dentro questo modulo
+  // (altrimenti il modulo è auto-contenuto).
+  const userRole = useAppStore((s) => s.user?.role);
+  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+
   const [phase, setPhase] = useState<Phase>('permission');
   const [error, setError] = useState<string | null>(null);
   const [capturedIds, setCapturedIds] = useState<Set<number>>(() => new Set());
   const [lockingId, setLockingId] = useState<number | null>(null);
   const [lockProgress, setLockProgress] = useState(0);
   const [lastCapturedId, setLastCapturedId] = useState<number | null>(null);
+  const [currentRoundLabel, setCurrentRoundLabel] = useState(1);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -376,8 +386,56 @@ export function NeglectGo() {
 
     roundIndexRef.current =
       (roundIndexRef.current + 1) % PANORAMA_URLS.length;
+    setCurrentRoundLabel(roundIndexRef.current + 1);
     setPhase('playing');
   }, []);
+
+  /**
+   * Admin-only "jump to round": l'admin clicca un pulsante del pannello
+   * skip e salta direttamente alla mappa N senza giocare le precedenti.
+   * Tecnica: viewer.setPanorama() in-place se il viewer è montato,
+   * oppure toggle di fase se siamo ancora in 'permission'. Reset dello
+   * stato di cattura così la nuova mappa parte pulita.
+   */
+  const jumpToRound = useCallback(
+    (zeroIdx: number) => {
+      if (!isAdmin) return;
+      if (zeroIdx < 0 || zeroIdx >= PANORAMA_URLS.length) return;
+      roundIndexRef.current = zeroIdx;
+      setCurrentRoundLabel(zeroIdx + 1);
+      capturedIdsRef.current = new Set();
+      setCapturedIds(new Set());
+      setLastCapturedId(null);
+      setLockingId(null);
+      setLockProgress(0);
+      lockingIdRef.current = null;
+      lockStartedAtRef.current = null;
+
+      const viewer = viewerRef.current;
+      if (viewer && phase === 'playing') {
+        // setPanorama tiene il viewer vivo: nessun flicker, swap fluido
+        // della texture + ri-popolazione dei marker con l'offset label
+        // del nuovo round.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (viewer.setPanorama(PANORAMA_URLS[zeroIdx]) as any).then(() => {
+          const markers = markersPluginRef.current;
+          if (markers) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (markers as any).clearMarkers?.();
+            for (const m of buildMarkers(zeroIdx)) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (markers as any).addMarker(m);
+            }
+          }
+        });
+      } else {
+        // Salta direttamente in playing — il viewer effect monterà col
+        // panorama giusto.
+        setPhase('playing');
+      }
+    },
+    [isAdmin, phase]
+  );
 
   /* ---- Render ---- */
   if (phase === 'permission') {
@@ -443,6 +501,97 @@ export function NeglectGo() {
           <WonOverlay backHref={`/${locale}`} onReplay={handleReset} />
         )}
       </AnimatePresence>
+
+      {isAdmin && (
+        <AdminRoundPicker
+          currentRound={currentRoundLabel}
+          totalRounds={PANORAMA_URLS.length}
+          onJump={jumpToRound}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   AdminRoundPicker — pannellino visibile SOLO agli admin/super_admin.
+   Mostra 8 micro-pulsanti circolari (R1...RN) in basso al centro: click
+   → jump immediato a quella mappa. Nascosto ai pazienti normali.
+   ============================================================ */
+function AdminRoundPicker({
+  currentRound,
+  totalRounds,
+  onJump,
+}: {
+  currentRound: number;
+  totalRounds: number;
+  onJump: (zeroIdx: number) => void;
+}) {
+  return (
+    <div
+      aria-label="Admin: salta a una mappa"
+      style={{
+        position: 'absolute',
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 25,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 12px',
+        borderRadius: 999,
+        background: 'rgba(15, 23, 42, 0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.16)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'ui-monospace, "SFMono-Regular", monospace',
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'rgba(255, 255, 255, 0.55)',
+          paddingRight: 2,
+        }}
+      >
+        Admin
+      </span>
+      {Array.from({ length: totalRounds }, (_, i) => {
+        const round = i + 1;
+        const active = round === currentRound;
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onJump(i)}
+            aria-label={`Vai alla mappa ${round}`}
+            title={`Mappa ${round}`}
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              border: active
+                ? '2px solid #E85A7A'
+                : '1px solid rgba(255, 255, 255, 0.28)',
+              background: active ? '#E85A7A' : 'rgba(255, 255, 255, 0.08)',
+              color: active ? '#ffffff' : 'rgba(255, 255, 255, 0.85)',
+              fontFamily: 'ui-monospace, "SFMono-Regular", monospace',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'background 120ms ease, transform 120ms ease',
+              padding: 0,
+            }}
+          >
+            {round}
+          </button>
+        );
+      })}
     </div>
   );
 }

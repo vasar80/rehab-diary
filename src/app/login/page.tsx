@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Shield, Loader2, UserPlus, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -16,7 +16,27 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   auth_callback: 'Errore durante il login automatico. Prova con email e password.',
 };
 
-export default function LoginPage() {
+/**
+ * Wrapper esterno: useSearchParams() richiede un boundary Suspense per
+ * lasciare che Next 16 statico-generi la pagina /login senza fallire il
+ * prerender. Il fallback è un loader veloce (la maggior parte degli
+ * utenti non rimane sul fallback più di un frame).
+ */
+export default function LoginPageWrapper() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 size={28} className="animate-spin text-primary" />
+        </div>
+      }
+    >
+      <LoginPage />
+    </Suspense>
+  );
+}
+
+function LoginPage() {
   const router = useRouter();
   const params = useSearchParams();
   const { login, register } = useAuth();
