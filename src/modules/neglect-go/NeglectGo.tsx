@@ -44,10 +44,13 @@ const CAPTURE_HOLD_MS = 650;
  * Panoramas cycled through on each "Continua" tap after winning a round.
  * Tutti gli URL verificati live: HTTP 200, CORS `*`, JPEG equirettangolare.
  *
- * Round 1: spiaggia da threejs.org examples CDN (4096×2048).
- * Round 2: paesaggio di montagna da Photo Sphere Viewer demo CDN (6000×3000).
+ * Round 1: spiaggia da threejs.org examples CDN (4096×2048, esterno mare).
+ * Round 2: paesaggio di montagna da Photo Sphere Viewer demo CDN (esterno).
  * Round 3: osservatorio ALMA (Atacama, Cile) — radio-telescopi notturni
- *          dal demo CDN di pannellum (1.6 MB).
+ *          dal demo CDN di pannellum (1.6 MB, cielo + atrium).
+ * Round 4: Birmingham Museum of Art — interno galleria con quadri ed
+ *          esposizioni, da pannellum.org (1.6 MB, ambiente interno
+ *          architettonico — varietà massima rispetto agli outdoor).
  *
  * Per aggiungere round, APPEND solo all'array — NON modificare la logica
  * di gioco. Le etichette dei marker si auto-calibrano via `roundIndex *
@@ -58,6 +61,7 @@ const PANORAMA_URLS = [
   'https://threejs.org/examples/textures/2294472375_24a3b8ef46_o.jpg',
   'https://photo-sphere-viewer-data.netlify.app/assets/sphere.jpg',
   'https://pannellum.org/images/alma.jpg',
+  'https://pannellum.org/images/bma-1.jpg',
 ];
 
 /**

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       features: features as FeatureRow[],
       matrix: matrix as TierFeatureRow[],
-      tiers: ['free', 'self', 'care'],
+      tiers: ['free', 'self', 'care', 'studio_nc', 'studio_tot'],
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed';
@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!['free', 'self', 'care'].includes(tier)) {
+    if (!['free', 'self', 'care', 'studio_nc', 'studio_tot'].includes(tier)) {
       return NextResponse.json({ error: 'tier non valido' }, { status: 400 });
     }
     const k = kinoraClient();

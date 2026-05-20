@@ -10,22 +10,35 @@ import { verifyStaffCaller } from '../../../_lib/staff-gate-server';
  * il paziente specifico — vede gli appuntamenti veri, le features
  * della tier giusta, ecc.
  *
- * Body: { email: string, redirectTo?: string }
+ * Body:
+ *   {
+ *     email: string,           // email del paziente (gestionale)
+ *     redirectTo?: string,     // path interno, default '/'
+ *     name?: string,           // serve solo se auto-create
+ *     patientId?: number,      // gestionale id, serve solo se auto-create
+ *   }
  *
- * Risposta: { url, action: 'magiclink' }
- *
- * IMPORTANTE: aprire il link in una finestra in incognito, altrimenti
- * la sessione dello staff viene sovrascritta. Non c'è modo di evitare
- * questo lato server — Supabase memorizza la sessione nei cookie del
- * dominio e una sola sessione alla volta. La UI lo deve spiegare.
+ * IMPORTANTE — silenzio assoluto verso il paziente:
+ *   - Se l'utente Supabase Auth con quella email NON esiste, lo
+ *     creiamo qui dietro le quinte (`email_confirm: true` → ZERO
+ *     email di conferma, password random che il paziente non vedrà
+ *     mai e non riceverà mai).
+ *   - generateLink restituisce l'URL solo a noi (in JSON). Supabase
+ *     NON manda l'email del magic link a meno che il flag `email`
+ *     non sia esplicitamente disabilitato — ma in questa fase pre-
+ *     lancio dobbiamo essere SICURI che non parta nulla. Usiamo per
+ *     questo `auth.admin.generateLink` (server) e non il client
+ *     `signInWithOtp`, che invece manda l'email automaticamente.
  *
  * Il link è:
  *   - one-time use (consumato al primo accesso)
  *   - scade dopo 1 ora (default Supabase)
  *   - firmato col project key, non riproducibile esternamente
  *
- * Gate: staff-only via verifyStaffCaller (email-allowlist o
- * user_metadata.role = admin/super_admin).
+ * Sessione staff: aprire il link in una finestra in incognito —
+ * la sessione paziente sovrascrive i cookie nella stessa origine.
+ *
+ * Gate: staff-only via verifyStaffCaller.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -33,9 +46,11 @@ export async function POST(request: NextRequest) {
     const admin = createSupabaseAdminClient();
 
     const body = await request.json();
-    const { email, redirectTo } = body as {
+    const { email, redirectTo, name, patientId } = body as {
       email?: string;
       redirectTo?: string;
+      name?: string;
+      patientId?: number;
     };
 
     if (!email || !email.includes('@')) {
@@ -51,20 +66,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the target user exists and is a patient (not another staff)
+    // Cerca un utente esistente
     const { data: list, error: listErr } = await admin.auth.admin.listUsers({
       perPage: 200,
     });
     if (listErr) throw listErr;
-    const target = list.users.find(
+    let target = list.users.find(
       (u) => (u.email || '').toLowerCase() === lowEmail
     );
+
+    // Auto-provision SILENZIOSO: se l'utente non esiste, lo creiamo qui
+    // senza inviare email. La password è generata a caso e non viene mai
+    // esposta — il paziente accederà solo via magic link che restiamo a
+    // mandare noi quando lo decidiamo. Questo è il caso "pre-lancio":
+    // lo staff vuole testare l'esperienza del paziente senza coinvolgerlo.
+    let autoCreated = false;
     if (!target) {
-      return NextResponse.json(
-        { error: 'Nessun utente con questa email — crea prima il login' },
-        { status: 404 }
-      );
+      // Password random non riusabile dal paziente — solo per soddisfare
+      // il requisito Supabase che richiede un valore al createUser.
+      const randomPassword =
+        'tmp-' +
+        Math.random().toString(36).slice(2) +
+        Math.random().toString(36).slice(2) +
+        '!';
+      const { data: created, error: createErr } =
+        await admin.auth.admin.createUser({
+          email: lowEmail,
+          password: randomPassword,
+          email_confirm: true, // niente email di conferma
+          user_metadata: {
+            name: name || lowEmail.split('@')[0],
+            role: 'patient',
+            patientId: patientId ?? null,
+            // Marker: questo utente è stato creato dall'admin a scopo di
+            // testing/impersonation pre-lancio. Se in futuro vorremo
+            // distinguere "provisioning vero" da "auto-impersonate"
+            // possiamo guardare questo campo.
+            provisioned_via: 'impersonate-autocreate',
+            provisioned_at: new Date().toISOString(),
+          },
+        });
+      if (createErr) throw createErr;
+      if (!created.user) throw new Error('Auto-creazione utente fallita');
+      target = created.user;
+      autoCreated = true;
     }
+
     const targetRole = (target.user_metadata as Record<string, unknown> | null)
       ?.role;
     if (targetRole === 'admin' || targetRole === 'super_admin') {
@@ -92,6 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       action: 'magiclink',
+      autoCreated,
       url,
       target: {
         uid: target.id,

@@ -98,6 +98,7 @@ export default function PazientiPage() {
     url: string | null;
     error: string;
     copied: boolean;
+    autoCreated: boolean;
   } | null>(null);
 
   useEffect(() => {
@@ -155,6 +156,7 @@ export default function PazientiPage() {
       url: null,
       error: '',
       copied: false,
+      autoCreated: false,
     });
     try {
       const token = await getAccessToken();
@@ -164,7 +166,15 @@ export default function PazientiPage() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: patient.email, redirectTo: '/' }),
+        body: JSON.stringify({
+          email: patient.email,
+          redirectTo: '/',
+          name: `${patient.first_name} ${patient.last_name}`,
+          // Solo per pazienti gestionale; per self-signup id è uno
+          // stringid, non un numero — lo lasciamo undefined.
+          patientId:
+            typeof patient.id === 'number' ? patient.id : undefined,
+        }),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
@@ -177,6 +187,7 @@ export default function PazientiPage() {
         url: data.url,
         error: '',
         copied: false,
+        autoCreated: Boolean(data.autoCreated),
       });
     } catch (e) {
       setImpersonate({
@@ -185,6 +196,7 @@ export default function PazientiPage() {
         url: null,
         error: e instanceof Error ? e.message : 'Errore',
         copied: false,
+        autoCreated: false,
       });
     }
   }
@@ -626,25 +638,27 @@ export default function PazientiPage() {
                         <button
                           type="button"
                           onClick={() => openImpersonate(r)}
-                          disabled={!r.auth_uid}
+                          disabled={!r.email}
                           title={
-                            !r.auth_uid
-                              ? 'Crea prima il login del paziente'
-                              : 'Vivi l\'app come questo paziente'
+                            !r.email
+                              ? 'Manca email — impossibile generare il magic link'
+                              : r.auth_uid
+                                ? 'Vivi l\'app come questo paziente'
+                                : 'Crea silenziosamente l\'account e accedi (zero email al paziente)'
                           }
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: 5,
                             padding: '6px 10px',
-                            background: r.auth_uid ? '#fef3c7' : '#f1f5f9',
-                            color: r.auth_uid ? '#b45309' : '#94a3b8',
+                            background: r.email ? '#fef3c7' : '#f1f5f9',
+                            color: r.email ? '#b45309' : '#94a3b8',
                             border: '1px solid',
-                            borderColor: r.auth_uid ? '#fcd34d' : '#e2e8f0',
+                            borderColor: r.email ? '#fcd34d' : '#e2e8f0',
                             borderRadius: 7,
                             fontSize: 11,
                             fontWeight: 600,
-                            cursor: r.auth_uid ? 'pointer' : 'not-allowed',
+                            cursor: r.email ? 'pointer' : 'not-allowed',
                             fontFamily: 'inherit',
                             transition: 'background 0.12s',
                           }}
@@ -706,6 +720,7 @@ function ImpersonateModal({
     url: string | null;
     error: string;
     copied: boolean;
+    autoCreated: boolean;
   };
   setState: (s: typeof state | null) => void;
 }) {
@@ -808,6 +823,24 @@ function ImpersonateModal({
 
         {state.url && !state.loading && (
           <>
+            {state.autoCreated && (
+              <div
+                style={{
+                  padding: '10px 13px',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: 8,
+                  marginBottom: 10,
+                  fontSize: 12,
+                  lineHeight: 1.45,
+                  color: '#065f46',
+                }}
+              >
+                <strong>Account creato silenziosamente.</strong> Nessuna
+                email è stata inviata al paziente. La password è random e
+                inutilizzabile — il paziente non sa nulla.
+              </div>
+            )}
             <div
               style={{
                 display: 'flex',

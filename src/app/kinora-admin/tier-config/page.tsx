@@ -40,6 +40,20 @@ const TIER_DEF = [
     color: '#fff',
     background: 'linear-gradient(135deg, #E85A7A 0%, #322A6E 100%)',
   },
+  {
+    id: 'studio_nc',
+    label: 'Studio NC',
+    desc: 'Partecipante studio scientifico NC',
+    color: '#fff',
+    background: '#0EA5E9',
+  },
+  {
+    id: 'studio_tot',
+    label: 'Studio TOT',
+    desc: 'Partecipante studio scientifico TOT',
+    color: '#fff',
+    background: '#10b981',
+  },
 ];
 
 export default function TierConfigPage() {

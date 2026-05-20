@@ -48,7 +48,7 @@ const NAV_TREE: NavNode[] = [
       { href: '/kinora-admin/diari', icon: BookOpen, label: 'Diari' },
       { href: '/kinora-admin/video', icon: Video, label: 'Video' },
       { href: '/kinora-admin/contratti', icon: FileText, label: 'Contratti' },
-      { href: '/kinora-admin/agents', icon: Bot, label: 'Agents AI' },
+      { href: '/kinora-admin/agenti', icon: Bot, label: 'Agenti AI' },
       { href: '/kinora-admin/configurazione', icon: Settings, label: 'Configurazione' },
     ],
   },
