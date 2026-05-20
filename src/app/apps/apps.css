@@ -1,110 +1,126 @@
 /* ============================================================
-   KINORÀ — Editorial Healthtech Design System (SCOPED)
+   KINORÀ APPS — design system SCOPED + integrato col core
    ============================================================
-   Trasferito dal progetto KINORA standalone. Carica i token di
-   design (bone/ink/terracotta + Fraunces/DM Sans/JetBrains Mono)
-   SOLO dentro la subtree `/apps`, in modo da non interferire col
-   resto dell'app (palette violet/pink + Inter/Playfair).
+   I moduli trasferiti da KINORA standalone consumano i token via
+   `var(--color-*)`, `var(--font-*)`, `var(--ink-line*)`. Definendo
+   questi token sotto `.kinora-shell` con i VALORI della palette
+   centrale di rehab-diary (violet/pink + Inter/Playfair) i moduli
+   si integrano graficamente senza che ne tocchiamo il sorgente.
+
+   Mapping:
+     KINORA bone/ink/terracotta  →  rehab-diary violet/pink
+     Fraunces                    →  Playfair Display
+     DM Sans                     →  Inter
+     JetBrains Mono              →  system monospace
 */
 
 .kinora-shell {
-  /* ---------- Surfaces (warm paper family) ---------- */
-  --color-bone: oklch(0.97 0.008 80);
-  --color-bone-2: oklch(0.94 0.012 75);
-  --color-paper: oklch(0.99 0.005 80);
-  --color-paper-warm: oklch(0.96 0.014 65);
+  /* ---------- Surfaces ---------- */
+  --color-bone:        #fbf7f9;  /* match --color-bg del core */
+  --color-bone-2:      #f6f3f7;  /* surface alt più scura */
+  --color-paper:       #ffffff;  /* card surface */
+  --color-paper-warm:  #fce7f3;  /* card pink-tinted */
 
-  /* ---------- Ink (warm dark family) ---------- */
-  --color-ink: oklch(0.18 0.015 60);
-  --color-ink-2: oklch(0.36 0.012 60);
-  --color-ink-mute: oklch(0.58 0.010 60);
+  /* ---------- Ink (text + lines) ---------- */
+  --color-ink:         #14102F;  /* --color-text core */
+  --color-ink-2:       #57516e;  /* --color-text-secondary */
+  --color-ink-mute:    #9088a8;  /* --color-text-muted */
 
-  /* ---------- Action — deep terracotta ---------- */
-  --color-accent: oklch(0.52 0.14 30);
-  --color-accent-soft: oklch(0.92 0.04 35);
-  --color-accent-strong: oklch(0.44 0.16 28);
+  /* ---------- Action — pink (loud color del core) ---------- */
+  --color-accent:        #E85A7A;
+  --color-accent-soft:   #fce7f3;
+  --color-accent-strong: #C13E5E;
 
-  /* ---------- Positive — sage ---------- */
-  --color-grow: oklch(0.62 0.08 145);
-  --color-grow-soft: oklch(0.93 0.03 145);
+  /* ---------- Positive / Success ---------- */
+  --color-grow:        #10b981;
+  --color-grow-soft:   #d1fae5;
 
-  /* ---------- Warm — amber ---------- */
-  --color-warm: oklch(0.78 0.12 70);
-  --color-warm-soft: oklch(0.95 0.05 80);
+  /* ---------- Warm / Celebration ---------- */
+  --color-warm:        #f59e0b;
+  --color-warm-soft:   #fef3c7;
 
   /* ---------- Alert ---------- */
-  --color-alert: oklch(0.55 0.17 25);
+  --color-alert:       #ef4444;
 
-  /* Hairline borders */
-  --ink-line: oklch(0.18 0.015 60 / 0.10);
-  --ink-line-strong: oklch(0.18 0.015 60 / 0.20);
+  /* ---------- Hairline borders ---------- */
+  --ink-line:          rgba(20, 16, 47, 0.10);
+  --ink-line-strong:   rgba(20, 16, 47, 0.20);
 
-  /* Easing & durations */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-soft: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-snap: cubic-bezier(0.4, 0, 0.2, 1);
-  --dur-quick: 140ms;
-  --dur-base: 220ms;
-  --dur-soft: 320ms;
-  --dur-settle: 480ms;
+  /* ---------- Easing & durations ---------- */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap:   cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-quick:   140ms;
+  --dur-base:    220ms;
+  --dur-soft:    320ms;
+  --dur-settle:  480ms;
 
-  /* Elevation */
+  /* ---------- Elevation ---------- */
   --shadow-1:
-    0 1px 0 oklch(0.18 0.015 60 / 0.04),
-    0 6px 16px -8px oklch(0.18 0.015 60 / 0.08);
+    0 1px 0 rgba(20, 16, 47, 0.04),
+    0 6px 16px -8px rgba(20, 16, 47, 0.08);
   --shadow-2:
-    0 1px 0 oklch(0.18 0.015 60 / 0.06),
-    0 18px 36px -12px oklch(0.18 0.015 60 / 0.18);
-  --shadow-pressed: 0 1px 0 oklch(0.18 0.015 60 / 0.04);
+    0 1px 0 rgba(20, 16, 47, 0.06),
+    0 18px 36px -12px rgba(20, 16, 47, 0.18);
+  --shadow-pressed: 0 1px 0 rgba(20, 16, 47, 0.04);
 
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  /* ---------- Radii ---------- */
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
   --radius-pill: 999px;
 
-  /* Surface for the shell itself */
-  background: var(--color-bone);
+  /* ---------- Fonts ----------
+     "Playfair Display" e "Inter" vengono caricati dal root layout
+     (src/app/layout.tsx) via next/font/google e sono referenziabili
+     ovunque per nome. I moduli usano --font-fraunces/dm-sans/jetbrains
+     come alias — qui li ridirigiamo. */
+  --font-fraunces:  "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-dm-sans:   "Inter", system-ui, -apple-system, sans-serif;
+  --font-jetbrains: ui-monospace, "SFMono-Regular", "JetBrains Mono", monospace;
+
+  /*
+   * Shell trasparente per le pagine non-module (es. /apps lista):
+   * lascia trasparire il gradiente radiale del body che dà identità
+   * al core. I moduli applicativi (Walking, Neglect-Go) si mettono in
+   * fixed inset-0 con il proprio `bg-bone` opaco, quindi non vedono
+   * il gradiente — è la scelta giusta per i giochi a tutto schermo.
+   */
   color: var(--color-ink);
-  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-dm-sans);
   min-height: 100dvh;
 }
 
-/* I moduli usano classi tailwind tipo bg-bone, text-ink, font-display,
-   text-paper, ecc. Le definisco come utility classiche scope-ate al
-   guscio, così non sporcano il resto dell'app. */
-.kinora-shell .bg-bone { background-color: var(--color-bone); }
-.kinora-shell .bg-bone-2 { background-color: var(--color-bone-2); }
-.kinora-shell .bg-paper { background-color: var(--color-paper); }
+/* ============================================================
+   Utility classes scopate (Tailwind v4 nel core non genera queste
+   utility a partire dai token KINORA, quindi le definiamo noi a
+   mano — fedelmente alle classi che i moduli usano).
+   ============================================================ */
+
+.kinora-shell .bg-bone       { background-color: var(--color-bone); }
+.kinora-shell .bg-bone-2     { background-color: var(--color-bone-2); }
+.kinora-shell .bg-paper      { background-color: var(--color-paper); }
 .kinora-shell .bg-paper-warm { background-color: var(--color-paper-warm); }
 
-.kinora-shell .text-ink { color: var(--color-ink); }
-.kinora-shell .text-ink-2 { color: var(--color-ink-2); }
-.kinora-shell .text-ink-mute { color: var(--color-ink-mute); }
-.kinora-shell .text-paper { color: var(--color-paper); }
-.kinora-shell .text-paper\/55 { color: oklch(0.99 0.005 80 / 0.55); }
-.kinora-shell .text-paper\/95 { color: oklch(0.99 0.005 80 / 0.95); }
-.kinora-shell .text-grow { color: var(--color-grow); }
-.kinora-shell .text-accent { color: var(--color-accent); }
+.kinora-shell .text-ink         { color: var(--color-ink); }
+.kinora-shell .text-ink-2       { color: var(--color-ink-2); }
+.kinora-shell .text-ink-mute    { color: var(--color-ink-mute); }
+.kinora-shell .text-paper       { color: var(--color-paper); }
+.kinora-shell .text-paper\/55   { color: rgba(255, 255, 255, 0.55); }
+.kinora-shell .text-paper\/95   { color: rgba(255, 255, 255, 0.95); }
+.kinora-shell .text-grow        { color: var(--color-grow); }
+.kinora-shell .text-accent      { color: var(--color-accent); }
 
-.kinora-shell .font-display {
-  font-family: var(--font-fraunces), ui-serif, Georgia, "Times New Roman", serif;
-  font-optical-sizing: auto;
-  font-variation-settings: "SOFT" 100;
-}
-.kinora-shell .font-sans {
-  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-}
-.kinora-shell .font-mono {
-  font-family: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
-}
+.kinora-shell .font-display { font-family: var(--font-fraunces); }
+.kinora-shell .font-sans    { font-family: var(--font-dm-sans); }
+.kinora-shell .font-mono    { font-family: var(--font-jetbrains); }
 
 .kinora-shell .rounded-pill { border-radius: var(--radius-pill); }
 
-/* Eyebrow — small caps mono accent used in many modals */
+/* Eyebrow caption — micro-titolo mono ricorrente nei modali */
 .kinora-shell .eyebrow {
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-family: var(--font-jetbrains);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.18em;
@@ -112,7 +128,12 @@
   color: var(--color-ink-mute);
 }
 
-/* Custom marker used by Photo Sphere Viewer (NeglectGo) */
+/* ============================================================
+   Custom marker della libreria Photo Sphere Viewer (Neglect-Go).
+   I marker sono iniettati come HTML dalla libreria, quindi devono
+   essere stilizzati con CSS globale scoped.
+   ============================================================ */
+
 .psv-target {
   display: flex;
   align-items: center;
@@ -120,13 +141,13 @@
   width: 56px;
   height: 56px;
   border-radius: 999px;
-  background: oklch(0.18 0.015 60 / 0.78);
-  border: 2px solid oklch(0.99 0.005 80 / 0.95);
-  color: oklch(0.99 0.005 80);
-  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  background: rgba(20, 16, 47, 0.78);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-family: var(--font-jetbrains);
   font-weight: 700;
   font-size: 22px;
   box-shadow:
-    0 4px 12px oklch(0.18 0.015 60 / 0.4),
-    0 0 0 4px oklch(0.99 0.005 80 / 0.12);
+    0 4px 12px rgba(232, 90, 122, 0.4),
+    0 0 0 4px rgba(255, 255, 255, 0.12);
 }
