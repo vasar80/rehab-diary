@@ -183,7 +183,11 @@ export async function GET(request: NextRequest) {
         p.id,
         p.first_name,
         p.last_name,
-        p.email,
+        -- Email del paziente: nel gestionale Resilients user_patient.email
+        -- e'' quasi sempre NULL (5/145 attivi). L''email vera e''
+        -- sull''account payer in user_user.email (login del gestionale)
+        -- — quella e'' la fonte canonica per "Crea login" e "Vivi come".
+        COALESCE(NULLIF(p.email, ''), u.email) AS email,
         p.gender::text AS gender,
         p.city,
         cc.code AS country_code,

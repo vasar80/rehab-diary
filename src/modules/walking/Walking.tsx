@@ -54,6 +54,36 @@ type Phase = 'playing' | 'success';
 export function Walking() {
   const locale = useLocale();
 
+  // Detect portrait orientation. In portrait il drag delle carte non
+  // funziona (framer-motion calcola in coord-screen → un container con
+  // rotate-90 CSS fa sì che l'asse X di drag finisca sull'asse Y dello
+  // schermo, fuori dalle constraints). Soluzione netta: bloccare il
+  // gioco in portrait e chiedere all'utente di ruotare. Il gioco è
+  // pensato per landscape (cards in fila orizzontale, 7+ per livello).
+  const [isPortrait, setIsPortrait] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(orientation: portrait)').matches;
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(orientation: portrait)');
+    const onChange = () => setIsPortrait(mq.matches);
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onChange);
+    } else {
+      (mq as unknown as { addListener: (l: () => void) => void }).addListener(onChange);
+    }
+    return () => {
+      if (typeof mq.removeEventListener === 'function') {
+        mq.removeEventListener('change', onChange);
+      } else {
+        (
+          mq as unknown as { removeListener: (l: () => void) => void }
+        ).removeListener(onChange);
+      }
+    };
+  }, []);
+
   const {
     level,
     hydrated: progressHydrated,
@@ -251,14 +281,15 @@ export function Walking() {
     }
   }, [errorState]);
 
+  if (isPortrait) {
+    return <RotateDeviceOverlay backHref={`/${locale}`} />;
+  }
+
   return (
     <div
       className={cn(
         'bg-bone flex flex-col overflow-hidden select-none',
         'fixed inset-0',
-        'portrait:inset-auto portrait:top-1/2 portrait:left-1/2',
-        'portrait:w-[100dvh] portrait:h-[100dvw]',
-        'portrait:-translate-x-1/2 portrait:-translate-y-1/2 portrait:rotate-90',
       )}
       style={{
         WebkitUserSelect: 'none',
@@ -1300,5 +1331,114 @@ function OutOfLivesOverlay({
         </Link>
       </div>
     </motion.div>
+  );
+}
+
+/* ============================================================
+   RotateDeviceOverlay
+   ============================================================
+   In portrait il drag delle carte non funziona (parent ruotato in CSS
+   sfasa il pointer-event mapping di framer-motion). Mostriamo un
+   prompt grafico e blocchiamo il gioco fino a quando l'utente non
+   ruota il telefono. Stile coerente col core: pink + violet, font
+   Playfair/Inter. */
+function RotateDeviceOverlay({ backHref }: { backHref: string }) {
+  const tCommon = useTranslations('Common');
+  return (
+    <div
+      className="fixed inset-0 flex flex-col items-center justify-center px-6 text-center"
+      style={{
+        background: '#fbf7f9',
+        color: '#14102F',
+        fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif',
+      }}
+    >
+      <motion.div
+        animate={{ rotate: [0, 90, 90, 0, 0], opacity: [1, 1, 1, 1, 1] }}
+        transition={{
+          duration: 2.4,
+          times: [0, 0.35, 0.55, 0.85, 1],
+          repeat: Infinity,
+          ease: [0.16, 1, 0.3, 1],
+        }}
+        style={{
+          width: 96,
+          height: 156,
+          borderRadius: 22,
+          border: '3px solid #322A6E',
+          background: 'rgba(232, 90, 122, 0.08)',
+          marginBottom: 36,
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 32,
+            height: 4,
+            borderRadius: 2,
+            background: '#322A6E',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            border: '2px solid #322A6E',
+          }}
+        />
+      </motion.div>
+      <h1
+        style={{
+          fontFamily: 'var(--font-playfair), "Playfair Display", Georgia, serif',
+          fontSize: 32,
+          fontWeight: 700,
+          lineHeight: 1.05,
+          letterSpacing: '-0.02em',
+          margin: 0,
+        }}
+      >
+        <span style={{ color: '#E85A7A' }}>R</span>
+        <span style={{ color: '#322A6E' }}>uota il telefono</span>
+      </h1>
+      <p
+        style={{
+          marginTop: 12,
+          fontSize: 15,
+          lineHeight: 1.5,
+          color: '#57516e',
+          maxWidth: 320,
+        }}
+      >
+        Il riordino delle carte funziona in orizzontale — gira il
+        dispositivo per giocare.
+      </p>
+      <Link
+        href={backHref}
+        style={{
+          marginTop: 28,
+          display: 'inline-flex',
+          alignItems: 'center',
+          height: 44,
+          padding: '0 22px',
+          borderRadius: 12,
+          border: '1px solid rgba(20, 16, 47, 0.20)',
+          color: '#322A6E',
+          fontWeight: 600,
+          fontSize: 14,
+          textDecoration: 'none',
+        }}
+      >
+        {tCommon('back')}
+      </Link>
+    </div>
   );
 }

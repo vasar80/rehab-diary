@@ -11,14 +11,22 @@ import {
   Search,
   FileText,
   Sparkles,
+  TrendingUp,
 } from 'lucide-react';
 import Wordmark from './Wordmark';
 
-type ActionKey = 'diary' | 'video' | 'appointments' | 'contract' | 'apps';
+type ActionKey =
+  | 'diary'
+  | 'video'
+  | 'appointments'
+  | 'contract'
+  | 'apps'
+  | 'record';
 
 const ACTIONS: { key: ActionKey; icon: React.ReactNode; label: string }[] = [
   { key: 'diary', icon: <BookOpen size={20} strokeWidth={1.7} />, label: 'Compila il diario di oggi' },
   { key: 'apps', icon: <Sparkles size={20} strokeWidth={1.7} />, label: 'I tuoi esercizi' },
+  { key: 'record', icon: <TrendingUp size={20} strokeWidth={1.7} />, label: 'I tuoi record' },
   { key: 'video', icon: <Video size={20} strokeWidth={1.7} />, label: 'Carica video' },
   { key: 'appointments', icon: <CalendarDays size={20} strokeWidth={1.7} />, label: 'Prossimi appuntamenti' },
   { key: 'contract', icon: <FileText size={20} strokeWidth={1.7} />, label: 'Compila il contratto' },
@@ -42,6 +50,7 @@ export default function SideMenu({ open, onClose, onNewChat, history = [], onSel
     else if (key === 'appointments') router.push('/?prompt=appointments');
     else if (key === 'contract') router.push('/?mode=contract');
     else if (key === 'apps') router.push('/apps');
+    else if (key === 'record') router.push('/record');
   }
 
   function handleNewChat() {
