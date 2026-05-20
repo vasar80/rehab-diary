@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCallerFromAuthHeader, createSupabaseAdminClient } from '@/lib/supabase/server';
-import { isStaffEmail, isStaffMetadataRole } from '../../../_lib/staff-gate';
+import { createSupabaseAdminClient } from '@/lib/supabase/server';
+import { verifyStaffCaller } from '../../../_lib/staff-gate-server';
 
 /**
  * POST /kinora-admin/api/pazienti/login
@@ -20,13 +20,8 @@ import { isStaffEmail, isStaffMetadataRole } from '../../../_lib/staff-gate';
  */
 export async function POST(request: NextRequest) {
   try {
-    const caller = await verifyCallerFromAuthHeader(request.headers.get('authorization'));
+    await verifyStaffCaller(request);
     const admin = createSupabaseAdminClient();
-    const { data: callerUser } = await admin.auth.admin.getUserById(caller.uid);
-    const role = (callerUser?.user?.user_metadata as Record<string, unknown> | null)?.role;
-    if (!isStaffEmail(caller.email) && !isStaffMetadataRole(role)) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
 
     const body = await request.json();
     const { email, name, password, patientId } = body as {

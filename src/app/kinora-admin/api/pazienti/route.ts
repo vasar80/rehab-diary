@@ -32,8 +32,8 @@
  *    the patient detail page.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCallerFromAuthHeader, createSupabaseAdminClient } from '@/lib/supabase/server';
-import { isStaffEmail, isStaffMetadataRole } from '../../_lib/staff-gate';
+import { createSupabaseAdminClient } from '@/lib/supabase/server';
+import { verifyStaffCaller } from '../../_lib/staff-gate-server';
 import { Client } from 'pg';
 
 export type BusinessStatus =
@@ -145,13 +145,8 @@ async function strDbClient(): Promise<Client> {
 
 export async function GET(request: NextRequest) {
   try {
-    const caller = await verifyCallerFromAuthHeader(request.headers.get('authorization'));
+    await verifyStaffCaller(request);
     const adminAuth = createSupabaseAdminClient();
-    const { data: callerUser } = await adminAuth.auth.admin.getUserById(caller.uid);
-    const role = (callerUser?.user?.user_metadata as Record<string, unknown> | null)?.role;
-    if (!isStaffEmail(caller.email) && !isStaffMetadataRole(role)) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
 
     const url = new URL(request.url);
     const search = (url.searchParams.get('q') || '').trim();

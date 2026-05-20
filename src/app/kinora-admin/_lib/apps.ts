@@ -1,6 +1,7 @@
 import {
   Stethoscope,
   Shield,
+  Settings2,
   BookOpen,
   Video,
   FileText,
@@ -39,6 +40,14 @@ export const KINORA_APPS: AppDef[] = [
     label: 'Accessi',
     sub: 'Permessi di accesso per ogni dipendente',
     gradient: 'linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)',
+  },
+  {
+    id: 'kinora-tier-config',
+    href: '/kinora-admin/tier-config',
+    icon: Settings2,
+    label: 'Tier paziente',
+    sub: 'Che cosa vede ogni tier (Free / Self / Care)',
+    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
   },
   {
     id: 'kinora-diari',

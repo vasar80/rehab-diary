@@ -1,14 +1,11 @@
 /**
- * Who is allowed to enter the Kinora admin area.
+ * Client-SAFE staff gate utilities. These can be imported from both
+ * client components (AdminShell) and server route handlers without
+ * pulling in any server-only modules.
  *
- * Until the dashboard's hr.employees table is mirrored into Kinora's
- * Supabase auth users (next step), we gate by a hardcoded staff email
- * allowlist plus anyone whose user_metadata.role is 'admin' or 'super_admin'.
- * The CEO email is always allowed.
- *
- * When the dashboard exposes a proper "is_staff(uid)" RPC we'll switch
- * to that and drop this file. For now this keeps the surface small and
- * portable — the only thing to migrate later is this one function.
+ * For the server-side verification (which calls the Supabase auth
+ * admin API), see ./staff-gate-server.ts — DO NOT import that from a
+ * client component.
  */
 
 const STAFF_EMAIL_ALLOWLIST = new Set<string>([

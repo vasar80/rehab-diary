@@ -17,6 +17,7 @@ import {
   X,
   Bell,
   Settings,
+  Settings2,
   Shield,
   Stethoscope,
   ChevronRight,
@@ -43,6 +44,7 @@ const NAV_TREE: NavNode[] = [
     children: [
       { href: '/kinora-admin/pazienti', icon: Stethoscope, label: 'Pazienti' },
       { href: '/kinora-admin/accessi', icon: Shield, label: 'Accessi applicativi' },
+      { href: '/kinora-admin/tier-config', icon: Settings2, label: 'Configurazione tier' },
       { href: '/kinora-admin/diari', icon: BookOpen, label: 'Diari' },
       { href: '/kinora-admin/video', icon: Video, label: 'Video' },
       { href: '/kinora-admin/contratti', icon: FileText, label: 'Contratti' },

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyCallerFromAuthHeader, createSupabaseAdminClient } from '@/lib/supabase/server';
-import { isStaffEmail, isStaffMetadataRole } from '../../_lib/staff-gate';
+import { verifyStaffCaller } from '../../_lib/staff-gate-server';
 import { createClient } from '@supabase/supabase-js';
 
 interface AccessRow {
@@ -21,20 +20,10 @@ function hrClient() {
   );
 }
 
-async function checkStaff(request: NextRequest) {
-  const caller = await verifyCallerFromAuthHeader(request.headers.get('authorization'));
-  const adminAuth = createSupabaseAdminClient();
-  const { data: callerUser } = await adminAuth.auth.admin.getUserById(caller.uid);
-  const role = (callerUser?.user?.user_metadata as Record<string, unknown> | null)?.role;
-  if (!isStaffEmail(caller.email) && !isStaffMetadataRole(role)) {
-    throw new Error('Not authorized');
-  }
-  return caller;
-}
 
 export async function GET(request: NextRequest) {
   try {
-    await checkStaff(request);
+    await verifyStaffCaller(request);
     const hr = hrClient();
     const { data, error } = await hr
       .from('employees')
@@ -56,7 +45,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    await checkStaff(request);
+    await verifyStaffCaller(request);
     const body = await request.json();
     const { employeeId, appId, grant } = body as {
       employeeId: string;
